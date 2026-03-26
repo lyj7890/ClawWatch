@@ -24,29 +24,35 @@ OpenClaw 实时会话监控器 - 现代化的 Web 界面，用于实时查看和
 
 ## 🚀 快速开始
 
-### 本地开发部署（推荐）
+### 生产部署（推荐）
 
 ```bash
-# 1. 启动后端 API 服务器（端口 3939）
 cd ~/.openclaw/ClawWatch
+
+# 构建前端并启动服务（单端口）
+./build-and-deploy.sh
+```
+
+访问：**http://localhost:3939**
+
+### 开发模式
+
+```bash
+# 1. 启动后端（端口 3939）
 ./start-daemon.sh
 
-# 2. 启动前端开发服务器（端口 5173）
+# 2. 启动前端开发服务器（端口 5173，带热更新）
 cd frontend
 npm install
 npm run dev
 ```
 
-访问：**http://localhost:5173**
+开发时访问：**http://localhost:5173**（自动代理 API 到 3939）
 
 ### 停止服务
 
 ```bash
-# 停止后端
 ./stop-daemon.sh
-
-# 停止前端（Ctrl+C 或）
-pkill -f "vite"
 ```
 
 ## 🏗️ 技术栈
@@ -82,9 +88,19 @@ ClawWatch/
 └── package.json
 ```
 
-## 🔌 API 接口
+## 🔌 架构说明
 
-后端运行在 `http://localhost:3939`，提供以下 API：
+**单端口部署（生产）：**
+- 端口 3939 同时提供前端静态文件和 API
+- 前端已构建为静态资源（`frontend/dist/`）
+- API 路径：`/api/*`
+- 其他路径：返回前端 SPA
+
+**双端口开发：**
+- 后端 3939（API）
+- 前端 5173（Vite 开发服务器，带热更新）
+
+### API 接口
 
 - `GET /api/agents` - 获取所有 agent 列表
 - `GET /api/sessions?agent=main` - 获取指定 agent 的所有 sessions

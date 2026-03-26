@@ -239,12 +239,44 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // 404 - 仅提供 API，不提供前端
-  res.writeHead(404, { 'Content-Type': 'application/json' });
-  res.end(JSON.stringify({ 
-    error: 'Not Found',
-    message: 'ClawWatch API Server - Frontend available at http://localhost:5173/'
-  }));
+  // 提供前端静态文件
+  const distPath = path.join(__dirname, 'frontend', 'dist');
+  let filePath = path.join(distPath, url.pathname === '/' ? 'index.html' : url.pathname);
+  
+  // 检查文件是否存在
+  if (!fs.existsSync(filePath)) {
+    // 如果是 SPA 路由，返回 index.html
+    if (!url.pathname.startsWith('/api')) {
+      filePath = path.join(distPath, 'index.html');
+    } else {
+      res.writeHead(404, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Not Found' }));
+      return;
+    }
+  }
+  
+  // 确定 MIME 类型
+  const ext = path.extname(filePath);
+  const mimeTypes = {
+    '.html': 'text/html',
+    '.js': 'application/javascript',
+    '.css': 'text/css',
+    '.json': 'application/json',
+    '.png': 'image/png',
+    '.jpg': 'image/jpeg',
+    '.svg': 'image/svg+xml',
+  };
+  const contentType = mimeTypes[ext] || 'application/octet-stream';
+  
+  // 读取并返回文件
+  try {
+    const content = fs.readFileSync(filePath);
+    res.writeHead(200, { 'Content-Type': contentType });
+    res.end(content);
+  } catch (error) {
+    res.writeHead(500, { 'Content-Type': 'text/plain' });
+    res.end('Internal Server Error');
+  }
 });
 
 // WebSocket 服务器
