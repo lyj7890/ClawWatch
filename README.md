@@ -1,342 +1,167 @@
-# Claw Watch 🦞
+# ClawWatch 🦞
 
-OpenClaw 实时会话监控器 - 一个强大的 Web 界面，用于实时查看和监控 OpenClaw 会话日志，支持 WebSocket 实时推送、思考过程展示、过滤搜索等功能。
+OpenClaw 实时会话监控器 - 现代化的 Web 界面，用于实时查看和监控 OpenClaw 会话日志。
 
 ## ✨ 功能特性
 
-- 🔴 **实时监控**：WebSocket 实时推送，无需刷新
-- 💭 **思考过程**：显示 AI 的思考过程（可折叠）
-- 🎯 **智能过滤**：按角色（用户/助手）过滤消息
-- 🔍 **全文搜索**：快速搜索会话内容
-- 🎨 **美观界面**：暗色主题，响应式设计
-- 🔧 **工具调用**：高亮显示工具调用和结果
-- 📊 **Token 统计**：显示每条消息的 Token 使用情况
-- 🔄 **多 Agent**：支持查看不同 Agent 的会话
+**📊 实时监控**
+- 自动轮询更新（3秒刷新）
+- 多 Agent 支持
+- Session Tabs（最多5个活跃会话）
+- 🔴 未读消息提示
+
+**🎯 消息展示**
+- Markdown 渲染（AI 回复）
+- Tool 执行结果可视化（✅成功/❌失败）
+- Thinking 过程展示（可折叠）
+- User/Assistant 视觉区分
+
+**🔧 便捷操作**
+- 批量展开/折叠 Thinking 和 Args
+- 消息排序（正序/倒序）
+- 角色过滤和搜索
+- Tool Result 整合显示
 
 ## 🚀 快速开始
 
-### 使用 Docker Compose（推荐）
+### 本地开发部署（推荐）
 
 ```bash
-# 进入项目目录
+# 1. 启动后端 API 服务器（端口 3939）
 cd ~/.openclaw/ClawWatch
+./start-daemon.sh
 
-# 启动服务
-docker-compose up -d
-
-# 查看日志
-docker-compose logs -f
-
-# 停止服务
-docker-compose down
+# 2. 启动前端开发服务器（端口 5173）
+cd frontend
+npm install
+npm run dev
 ```
 
-访问：**http://localhost:3939**
+访问：**http://localhost:5173**
 
-### 使用 Docker 命令
+### 停止服务
 
 ```bash
-cd ~/.openclaw/ClawWatch
+# 停止后端
+./stop-daemon.sh
 
-# 构建镜像
-docker build -t openclaw-viewer .
-
-# 运行容器
-docker run -d \
-  --name openclaw-viewer \
-  -p 3939:3939 \
-  -v ~/.openclaw:/root/.openclaw:ro \
-  openclaw-viewer
-
-# 查看日志
-docker logs -f openclaw-viewer
-
-# 停止并删除容器
-docker stop openclaw-viewer && docker rm openclaw-viewer
+# 停止前端（Ctrl+C 或）
+pkill -f "vite"
 ```
+
+## 🏗️ 技术栈
+
+**前端：**
+- Vue 3 (Composition API)
+- Vite (构建工具)
+- Tailwind CSS v4 (样式)
+- Marked (Markdown 渲染)
+
+**后端：**
+- Node.js
+- HTTP API (RESTful)
+- 文件系统监控
+
+## 📁 项目结构
+
+```
+ClawWatch/
+├── frontend/              # Vue 3 前端
+│   ├── src/
+│   │   ├── App.vue        # 主应用
+│   │   ├── components/
+│   │   │   └── MessageCard.vue
+│   │   └── style.css
+│   ├── package.json
+│   └── vite.config.js
+├── web-viewer-server.js   # Node.js API 服务器
+├── start-daemon.sh        # 启动后端脚本
+├── stop-daemon.sh         # 停止后端脚本
+├── restart-daemon.sh      # 重启后端脚本
+├── status.sh              # 查看状态
+└── package.json
+```
+
+## 🔌 API 接口
+
+后端运行在 `http://localhost:3939`，提供以下 API：
+
+- `GET /api/agents` - 获取所有 agent 列表
+- `GET /api/sessions?agent=main` - 获取指定 agent 的所有 sessions
+- `GET /api/latest-session?agent=main` - 获取最新 session
+- `GET /api/session?path=<path>` - 读取指定 session 的内容
 
 ## 📖 使用指南
 
-### 界面说明
+### Session Tabs
 
-打开浏览器访问 http://localhost:3939，你会看到：
+顶部显示最近 5 个活跃 sessions：
+- 🔴 红点标记最新 session
+- 点击切换到不同 session
+- 有新消息的 session 会显示红点提示
 
-1. **顶部控制栏**
-   - Agent 选择器：切换不同的 agent
-   - 刷新按钮：手动刷新会话
-   - 过滤按钮：All / 👤 User / 🤖 Assistant
-   - Show Thinking：显示/隐藏思考过程
-   - Auto Scroll：自动滚动到最新消息
-   - 搜索框：全文搜索
+### 消息过滤
 
-2. **消息列表**
-   - 用户消息：蓝色标记 👤
-   - 助手消息：绿色标记 🤖
-   - 思考块：点击展开/折叠 💭
-   - 工具调用：黄色标记 🔧
+侧边栏提供过滤选项：
+- 👤 User - 用户消息
+- 🤖 Assistant - AI 回复
+- 🔧 Tools - 工具调用
+- 💭 Thinking - 思考过程
 
-3. **状态指示器**
-   - 🟢 绿点：WebSocket 已连接，实时监控中
-   - 🔴 红点：连接断开，自动重连中
+### 批量操作
 
-### 实时监控
+顶部工具栏：
+- 🔽 Newest First / 🔼 Oldest First - 切换排序
+- 💭 Expand/Collapse All Thinking - 批量展开/折叠思考
+- 🔧 Show/Hide All Args - 批量展开/折叠工具参数
 
-- 服务会自动监控最新的会话文件
-- 有新消息时会实时推送到浏览器
-- 无需手动刷新页面
+### Tool 执行状态
 
-### 思考过程
+工具调用卡片会根据执行结果改变颜色：
+- 🟡 黄色 - 等待执行
+- 🟢 绿色 - 执行成功（✅）
+- 🔴 红色 - 执行失败（❌）
 
-- 默认显示思考块
-- 点击 "💭 Thinking" 可展开/折叠详细内容
-- 取消勾选 "Show Thinking" 可隐藏所有思考块
+## 🛠️ 开发
 
-## 🛠️ 配置
-
-### 修改端口
-
-编辑 `docker-compose.yml`：
-
-```yaml
-ports:
-  - "8080:3939"  # 将宿主机端口改为 8080
-```
-
-然后重启：
+### 前端开发
 
 ```bash
-docker-compose down
-docker-compose up -d
-```
-
-### 自定义样式
-
-前端页面使用 CSS 变量，可以轻松自定义主题。
-
-编辑 `web-viewer.html`，找到 `:root` 部分：
-
-```css
-:root {
-  --bg-primary: #1a1a1a;      /* 主背景色 */
-  --bg-secondary: #2a2a2a;    /* 次背景色 */
-  --accent: #1890ff;          /* 强调色 */
-  --user-color: #4a9eff;      /* 用户消息颜色 */
-  --assistant-color: #52c41a; /* 助手消息颜色 */
-  /* ... 更多配置 */
-}
-```
-
-## 📝 快捷命令（可选）
-
-添加到 `~/.bashrc` 或 `~/.zshrc`：
-
-```bash
-# 启动 Web 查看器
-alias vsw-web="cd ~/.openclaw/ClawWatch && docker-compose up -d && echo '🌐 http://localhost:3939'"
-
-# 停止 Web 查看器
-alias vsw-stop="cd ~/.openclaw/ClawWatch && docker-compose down"
-
-# 查看日志
-alias vsw-logs="docker logs -f openclaw-session-viewer"
-
-# 重启服务
-alias vsw-restart="cd ~/.openclaw/ClawWatch && docker-compose restart"
-
-# 重新构建并启动
-alias vsw-rebuild="cd ~/.openclaw/ClawWatch && docker-compose up -d --build"
-```
-
-使配置生效：
-
-```bash
-source ~/.bashrc  # 或 source ~/.zshrc
-```
-
-之后就可以使用：
-
-```bash
-vsw-web      # 启动服务
-vsw-logs     # 查看日志
-vsw-stop     # 停止服务
-vsw-restart  # 重启服务
-```
-
-## 🔧 故障排除
-
-### 1. 端口已被占用
-
-```bash
-# 查看端口占用
-lsof -i :3939
-
-# 解决方法：修改 docker-compose.yml 中的端口，或停止占用端口的程序
-```
-
-### 2. 镜像拉取失败
-
-```bash
-# 测试能否访问内部镜像仓库
-docker pull hub.intra.mlamp.cn/public/node:latest
-
-# 如果失败，检查网络或 VPN 连接
-```
-
-### 3. 无法读取会话文件
-
-检查 Docker 是否有权限访问 `~/.openclaw` 目录：
-
-- **macOS**: Docker Desktop → Settings → Resources → File Sharing
-- **Linux**: 检查目录权限
-
-### 4. WebSocket 连接失败
-
-- 检查防火墙设置
-- 确认容器正常运行：`docker ps`
-- 查看容器日志：`docker logs openclaw-session-viewer`
-
-### 5. 页面显示空白
-
-- 检查浏览器控制台是否有错误
-- 确认 agent 目录下有会话文件
-- 尝试刷新页面或切换 agent
-
-## 📂 项目结构
-
-```
-~/.openclaw/ClawWatch/
-├── web-viewer-server.js   # 后端服务器（Node.js + WebSocket）
-├── web-viewer.html         # 前端页面（HTML + CSS + JS）
-├── package.json            # Node.js 依赖配置
-├── Dockerfile              # Docker 镜像定义
-├── docker-compose.yml      # Docker Compose 配置
-├── .dockerignore           # Docker 构建忽略文件
-└── README.md               # 本文档
-```
-
-## 🌟 技术栈
-
-- **后端**: Node.js + HTTP + WebSocket (ws)
-- **前端**: 原生 JavaScript + HTML5 + CSS3
-- **容器**: Docker + Docker Compose
-- **基础镜像**: hub.intra.mlamp.cn/public/node:latest
-
-## 🔄 开发说明
-
-### 本地开发（不使用 Docker）
-
-```bash
-cd ~/.openclaw/ClawWatch
+cd frontend
 
 # 安装依赖
 npm install
 
-# 启动服务
-node web-viewer-server.js
+# 开发模式（热更新）
+npm run dev
 
-# 访问 http://localhost:3939
+# 构建生产版本
+npm run build
+
+# 预览生产构建
+npm run preview
 ```
 
-### 修改代码后重启
+### 后端开发
 
 ```bash
-# 方式 1: 重启容器
-docker-compose restart
-
-# 方式 2: 重新构建（代码有重大改动时）
-docker-compose up -d --build
-```
-
-## 📜 License
-
-MIT
-
----
-
-**问题反馈**: 如有问题或建议，请联系项目维护者。
-
----
-
-## 🖥️ 本地部署（非容器化）
-
-如果你不想使用容器，可以直接在本地运行 Claw Watch。
-
-### 前置要求
-- Node.js 18+ 
-- npm 或 pnpm
-
-### 快速启动
-
-**1. 前台运行（适合开发/测试）**
-```bash
-./start-local.sh
-```
-按 `Ctrl+C` 停止。
-
-**2. 后台运行（适合生产）**
-```bash
-# 启动
-./start-daemon.sh
-
-# 查看状态
-./status.sh
-
-# 查看日志
+# 查看后端日志
 tail -f clawwatch.log
 
-# 停止
-./stop-daemon.sh
+# 查看后端状态
+./status.sh
 
-# 重启
+# 重启后端
 ./restart-daemon.sh
 ```
 
-### 配置端口
-```bash
-# 默认端口 3939
-PORT=8080 ./start-local.sh
+## 📝 开机自启（可选）
 
-# 或
-export PORT=8080
-./start-daemon.sh
-```
+### macOS (launchd)
 
-### 对比：容器 vs 本地
-
-| 特性 | 容器化 (podman-compose) | 本地部署 |
-|------|----------------------|---------|
-| 启动速度 | 慢（需要构建镜像） | 快 |
-| 资源占用 | 高 | 低 |
-| 隔离性 | 强 | 弱 |
-| 依赖管理 | 自动 | 手动 |
-| 适用场景 | 生产环境、多实例 | 开发、单实例 |
-
-### 常见问题
-
-**Q: 端口被占用？**
-```bash
-# 查看占用端口的进程
-lsof -i:3939
-
-# 或换个端口
-PORT=8080 ./start-daemon.sh
-```
-
-**Q: 启动失败？**
-```bash
-# 查看日志
-cat clawwatch.log
-
-# 检查依赖
-npm install
-```
-
-**Q: 如何开机自启？**
-
-**macOS (launchd):**
 ```bash
 # 创建 plist 文件
-cat > ~/Library/LaunchAgents/com.openclaw.clawwatch.plist << PLIST
+cat > ~/Library/LaunchAgents/com.openclaw.clawwatch.plist << 'EOF'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -345,42 +170,86 @@ cat > ~/Library/LaunchAgents/com.openclaw.clawwatch.plist << PLIST
     <string>com.openclaw.clawwatch</string>
     <key>ProgramArguments</key>
     <array>
-        <string>/bin/bash</string>
-        <string>$HOME/.openclaw/ClawWatch/start-daemon.sh</string>
+        <string>/Users/YOUR_USERNAME/.openclaw/ClawWatch/start-daemon.sh</string>
     </array>
     <key>RunAtLoad</key>
     <true/>
     <key>KeepAlive</key>
     <true/>
+    <key>StandardOutPath</key>
+    <string>/Users/YOUR_USERNAME/.openclaw/ClawWatch/clawwatch.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/YOUR_USERNAME/.openclaw/ClawWatch/clawwatch.log</string>
 </dict>
 </plist>
-PLIST
+EOF
 
-# 加载
+# 加载服务
 launchctl load ~/Library/LaunchAgents/com.openclaw.clawwatch.plist
 ```
 
-**Linux (systemd):**
+### Linux (systemd)
+
 ```bash
 # 创建服务文件
-sudo tee /etc/systemd/system/clawwatch.service << SERVICE
+sudo tee /etc/systemd/system/clawwatch.service << 'EOF'
 [Unit]
-Description=Claw Watch
+Description=ClawWatch - OpenClaw Session Monitor
 After=network.target
 
 [Service]
 Type=simple
-User=$USER
-WorkingDirectory=$HOME/.openclaw/ClawWatch
-ExecStart=/usr/bin/node web-viewer-server.js
+User=YOUR_USERNAME
+WorkingDirectory=/home/YOUR_USERNAME/.openclaw/ClawWatch
+ExecStart=/home/YOUR_USERNAME/.openclaw/ClawWatch/start-local.sh
 Restart=always
 
 [Install]
 WantedBy=multi-user.target
-SERVICE
+EOF
 
-# 启用
+# 启用并启动
+sudo systemctl daemon-reload
 sudo systemctl enable clawwatch
 sudo systemctl start clawwatch
 ```
 
+## 🐛 故障排查
+
+### 后端无法启动
+
+```bash
+# 检查端口占用
+lsof -i :3939
+
+# 查看日志
+cat clawwatch.log
+
+# 手动启动测试
+node web-viewer-server.js
+```
+
+### 前端连接失败
+
+1. 确认后端已启动：`./status.sh`
+2. 检查 API 是否可访问：`curl http://localhost:3939/api/agents`
+3. 检查前端代理配置：`frontend/vite.config.js`
+
+### Sessions 不更新
+
+1. 检查 OpenClaw 会话路径：`~/.openclaw/agents/main/sessions/`
+2. 确认有写入权限
+3. 重启后端服务
+
+## 📄 许可证
+
+MIT
+
+## 🤝 贡献
+
+欢迎提交 Issue 和 Pull Request！
+
+## 📞 支持
+
+- 仓库：git@codex.mlamp.cn:paas/ClawWatch.git
+- 问题反馈：创建 Issue
