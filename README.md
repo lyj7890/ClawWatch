@@ -24,28 +24,27 @@ OpenClaw 实时会话监控器 - 现代化的 Web 界面，用于实时查看和
 
 ## 🚀 快速开始
 
-### 部署运行
-
 ```bash
 cd ~/.openclaw/ClawWatch
 
-# 构建前端并启动服务
-./build-and-deploy.sh
+# 启动服务（自动构建前端）
+./clawwatch.sh
+
+# 或者明确指定命令
+./clawwatch.sh start
 ```
 
 访问：**http://localhost:3939**
 
-### 其他命令
+### 管理命令
 
 ```bash
-# 重启服务
-./restart-daemon.sh
-
-# 停止服务
-./stop-daemon.sh
-
-# 查看状态
-./status.sh
+./clawwatch.sh start     # 启动服务
+./clawwatch.sh stop      # 停止服务
+./clawwatch.sh restart   # 重启服务
+./clawwatch.sh status    # 查看状态
+./clawwatch.sh logs      # 查看日志
+./clawwatch.sh help      # 帮助信息
 ```
 
 ## 🏗️ 技术栈
@@ -129,27 +128,25 @@ ClawWatch/
 
 ## 🛠️ 开发
 
-### 修改前端
+### 修改代码
+
+```bash
+# 1. 修改前端或后端代码
+# 2. 重启服务（自动重新构建）
+./clawwatch.sh restart
+
+# 查看日志
+./clawwatch.sh logs
+
+# 或实时查看
+tail -f clawwatch.log
+```
+
+### 首次安装
 
 ```bash
 cd frontend
-
-# 安装依赖（首次）
 npm install
-
-# 修改代码后，构建并重启
-cd ..
-./build-and-deploy.sh
-```
-
-### 调试
-
-```bash
-# 查看日志
-tail -f clawwatch.log
-
-# 查看状态
-./status.sh
 ```
 
 ## 📝 开机自启（可选）
@@ -157,7 +154,7 @@ tail -f clawwatch.log
 ### macOS (launchd)
 
 ```bash
-# 创建 plist 文件
+# 创建 plist 文件（替换 YOUR_USERNAME）
 cat > ~/Library/LaunchAgents/com.openclaw.clawwatch.plist << 'EOF'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -167,7 +164,8 @@ cat > ~/Library/LaunchAgents/com.openclaw.clawwatch.plist << 'EOF'
     <string>com.openclaw.clawwatch</string>
     <key>ProgramArguments</key>
     <array>
-        <string>/Users/YOUR_USERNAME/.openclaw/ClawWatch/start-daemon.sh</string>
+        <string>/Users/YOUR_USERNAME/.openclaw/ClawWatch/clawwatch.sh</string>
+        <string>start</string>
     </array>
     <key>RunAtLoad</key>
     <true/>
@@ -188,7 +186,7 @@ launchctl load ~/Library/LaunchAgents/com.openclaw.clawwatch.plist
 ### Linux (systemd)
 
 ```bash
-# 创建服务文件
+# 创建服务文件（替换 YOUR_USERNAME）
 sudo tee /etc/systemd/system/clawwatch.service << 'EOF'
 [Unit]
 Description=ClawWatch - OpenClaw Session Monitor
@@ -198,7 +196,7 @@ After=network.target
 Type=simple
 User=YOUR_USERNAME
 WorkingDirectory=/home/YOUR_USERNAME/.openclaw/ClawWatch
-ExecStart=/home/YOUR_USERNAME/.openclaw/ClawWatch/start-local.sh
+ExecStart=/home/YOUR_USERNAME/.openclaw/ClawWatch/clawwatch.sh start
 Restart=always
 
 [Install]
@@ -213,30 +211,40 @@ sudo systemctl start clawwatch
 
 ## 🐛 故障排查
 
-### 后端无法启动
+### 服务无法启动
 
 ```bash
+# 检查状态
+./clawwatch.sh status
+
+# 查看日志
+./clawwatch.sh logs
+
 # 检查端口占用
 lsof -i :3939
 
-# 查看日志
-cat clawwatch.log
-
-# 手动启动测试
-node web-viewer-server.js
+# 停止旧进程
+./clawwatch.sh stop
 ```
 
-### 前端连接失败
+### 页面无法访问
 
-1. 确认后端已启动：`./status.sh`
-2. 检查 API 是否可访问：`curl http://localhost:3939/api/agents`
-3. 检查前端代理配置：`frontend/vite.config.js`
+```bash
+# 1. 确认服务已启动
+./clawwatch.sh status
+
+# 2. 测试 API
+curl http://localhost:3939/api/agents
+
+# 3. 重启服务
+./clawwatch.sh restart
+```
 
 ### Sessions 不更新
 
 1. 检查 OpenClaw 会话路径：`~/.openclaw/agents/main/sessions/`
 2. 确认有写入权限
-3. 重启后端服务
+3. 重启服务：`./clawwatch.sh restart`
 
 ## 📄 许可证
 
