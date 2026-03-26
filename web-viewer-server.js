@@ -239,19 +239,30 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // 提供前端页面
+  // 提供前端页面（重定向到 Vue 前端）
   if (url.pathname === '/' || url.pathname === '/index.html') {
-    const htmlPath = path.join(__dirname, 'web-viewer.html');
-
-    if (!fs.existsSync(htmlPath)) {
-      res.writeHead(404, { 'Content-Type': 'text/plain' });
-      res.end('Frontend not found. Please create web-viewer.html');
-      return;
-    }
-
-    const html = fs.readFileSync(htmlPath, 'utf-8');
     res.writeHead(200, { 'Content-Type': 'text/html' });
-    res.end(html);
+    res.end(`
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>ClawWatch - Redirecting...</title>
+  <meta http-equiv="refresh" content="0; url=http://localhost:5173/">
+</head>
+<body>
+  <div style="font-family: sans-serif; text-align: center; padding: 50px;">
+    <h1>🦞 ClawWatch</h1>
+    <p>Redirecting to Vue frontend...</p>
+    <p>If not redirected, please visit: <a href="http://localhost:5173/">http://localhost:5173/</a></p>
+    <p style="color: #666; font-size: 12px; margin-top: 30px;">
+      Backend API running on port 3939<br>
+      Frontend running on port 5173
+    </p>
+  </div>
+</body>
+</html>
+    `);
     return;
   }
 

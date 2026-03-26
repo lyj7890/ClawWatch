@@ -9,9 +9,5 @@
 
 Press Ctrl+C to stop
   
-[WebSocket] Client connected: wbohr1vhj
-[WebSocket] Client wbohr1vhj watching: /Users/mlamp/.openclaw/agents/main/sessions/29f0941c-b5d2-4aa7-bba9-0cedf9e65bb4.jsonl
-[WebSocket] Client disconnected: wbohr1vhj
-[WebSocket] Client connected: 3n9lrxaq2
-[WebSocket] Client 3n9lrxaq2 watching: /Users/mlamp/.openclaw/agents/main/sessions/29f0941c-b5d2-4aa7-bba9-0cedf9e65bb4.jsonl
-[WebSocket] Client 3n9lrxaq2 watching: /Users/mlamp/.openclaw/agents/main/sessions/29f0941c-b5d2-4aa7-bba9-0cedf9e65bb4.jsonl
+[WebSocket] Client connected: sd3tds6ma
+[WebSocket] Client sd3tds6ma watching: /Users/mlamp/.openclaw/agents/main/sessions/29f0941c-b5d2-4aa7-bba9-0cedf9e65bb4.jsonl
