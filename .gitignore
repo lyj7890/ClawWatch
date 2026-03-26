@@ -1,0 +1,25 @@
+# 日志文件
+*.log
+
+# PID 文件
+*.pid
+
+# Node.js
+node_modules/
+
+# 前端构建产物
+frontend/dist/
+
+# 临时文件
+*.tmp
+*.temp
+
+# macOS
+.DS_Store
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
