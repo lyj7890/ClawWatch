@@ -157,8 +157,8 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import MessageCard from './components/MessageCard.vue'
 
-// 开发环境通过 Vite 代理，生产环境直接访问同端口
-const API_BASE = import.meta.env.DEV ? 'http://localhost:3939' : ''
+// API 在同端口
+const API_BASE = ''
 
 const connected = ref(false)
 const loading = ref(true)

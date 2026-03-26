@@ -24,35 +24,28 @@ OpenClaw 实时会话监控器 - 现代化的 Web 界面，用于实时查看和
 
 ## 🚀 快速开始
 
-### 生产部署（推荐）
+### 部署运行
 
 ```bash
 cd ~/.openclaw/ClawWatch
 
-# 构建前端并启动服务（单端口）
+# 构建前端并启动服务
 ./build-and-deploy.sh
 ```
 
 访问：**http://localhost:3939**
 
-### 开发模式
+### 其他命令
 
 ```bash
-# 1. 启动后端（端口 3939）
-./start-daemon.sh
+# 重启服务
+./restart-daemon.sh
 
-# 2. 启动前端开发服务器（端口 5173，带热更新）
-cd frontend
-npm install
-npm run dev
-```
-
-开发时访问：**http://localhost:5173**（自动代理 API 到 3939）
-
-### 停止服务
-
-```bash
+# 停止服务
 ./stop-daemon.sh
+
+# 查看状态
+./status.sh
 ```
 
 ## 🏗️ 技术栈
@@ -90,15 +83,11 @@ ClawWatch/
 
 ## 🔌 架构说明
 
-**单端口部署（生产）：**
-- 端口 3939 同时提供前端静态文件和 API
-- 前端已构建为静态资源（`frontend/dist/`）
-- API 路径：`/api/*`
-- 其他路径：返回前端 SPA
-
-**双端口开发：**
-- 后端 3939（API）
-- 前端 5173（Vite 开发服务器，带热更新）
+**单端口架构：**
+- 端口 3939 同时提供前端和 API
+- 前端：静态资源（`frontend/dist/`）
+- API：`/api/*` 路径
+- Node.js 后端同时处理静态文件和 API 请求
 
 ### API 接口
 
@@ -140,35 +129,27 @@ ClawWatch/
 
 ## 🛠️ 开发
 
-### 前端开发
+### 修改前端
 
 ```bash
 cd frontend
 
-# 安装依赖
+# 安装依赖（首次）
 npm install
 
-# 开发模式（热更新）
-npm run dev
-
-# 构建生产版本
-npm run build
-
-# 预览生产构建
-npm run preview
+# 修改代码后，构建并重启
+cd ..
+./build-and-deploy.sh
 ```
 
-### 后端开发
+### 调试
 
 ```bash
-# 查看后端日志
+# 查看日志
 tail -f clawwatch.log
 
-# 查看后端状态
+# 查看状态
 ./status.sh
-
-# 重启后端
-./restart-daemon.sh
 ```
 
 ## 📝 开机自启（可选）
