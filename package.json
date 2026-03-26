@@ -1,0 +1,16 @@
+{
+  "name": "claw-watch",
+  "version": "1.0.0",
+  "description": "Claw Watch - OpenClaw 实时会话监控器",
+  "main": "web-viewer-server.js",
+  "scripts": {
+    "start": "node web-viewer-server.js",
+    "dev": "node web-viewer-server.js"
+  },
+  "keywords": ["openclaw", "session", "viewer", "websocket", "watch", "monitor"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}

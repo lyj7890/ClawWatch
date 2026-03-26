@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Claw Watch - OpenClaw 实时会话监控器</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --bg-primary: #1e1e1e;
+      --bg-secondary: #252525;
+      --bg-tertiary: #2f2f2f;
+      --text-primary: #e8e8e8;
+      --text-secondary: #b8b8b8;
+      --text-dim: #888888;
+      --border-color: #3a3a3a;
+      --user-color: #5cb3ff;
+      --assistant-color: #73d13d;
+      --tool-color: #ffc53d;
+      --thinking-bg: #1e3a5f;
+      --thinking-border: #5b8fc7;
+      --accent: #40a9ff;
+      --accent-hover: #69c0ff;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.6;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 12px;
+    }
+
+    header {
+      background: var(--bg-secondary);
+      padding: 12px 16px;
+      border-radius: 6px;
+      margin-bottom: 12px;
+      border: 1px solid var(--border-color);
+    }
+
+    h1 {
+      font-size: 20px;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .status {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #52c41a;
+      animation: pulse 2s infinite;
+    }
+
+    .status.disconnected {
+      background: #f5222d;
+      animation: none;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .controls {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+
+    .controls select,
+    .controls input,
+    .controls button {
+      padding: 6px 10px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+      border-radius: 4px;
+      font-size: 13px;
+    }
+
+    .controls select:focus,
+    .controls input:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    .controls button {
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .controls button:hover {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+
+    .controls button:active {
+      transform: scale(0.98);
+    }
+
+    .filter-group {
+      display: flex;
+      gap: 5px;
+    }
+
+    .filter-btn {
+      padding: 6px 12px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      color: var(--text-secondary);
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 13px;
+      transition: all 0.2s;
+    }
+
+    .filter-btn.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: white;
+    }
+
+    .messages {
+      margin-top: 12px;
+    }
+
+    .message {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 10px 14px;
+      margin-bottom: 8px;
+      transition: all 0.3s;
+    }
+
+    .message:hover {
+      border-color: var(--accent);
+    }
+
+    .message-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 8px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .message-role {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 500;
+      font-size: 14px;
+    }
+
+    .role-user { color: var(--user-color); }
+    .role-assistant { color: var(--assistant-color); }
+    .role-tool { color: var(--tool-color); }
+
+    .message-meta-group {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 2px;
+    }
+
+    .message-meta {
+      color: var(--text-dim);
+      font-size: 11px;
+      white-space: nowrap;
+    }
+
+    .message-content {
+      color: var(--text-primary);
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+      line-height: 1.5;
+      font-size: 14px;
+    }
+
+    .message-content:empty {
+      display: none;
+    }
+
+    .thinking-block {
+      background: var(--thinking-bg);
+      border: 1px solid var(--thinking-border);
+      border-radius: 4px;
+      margin: 6px 0 8px 0;
+      overflow: hidden;
+    }
+
+    .thinking-header {
+      padding: 8px 12px;
+      background: rgba(91, 143, 199, 0.15);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      user-select: none;
+      font-size: 13px;
+    }
+
+    .thinking-header:hover {
+      background: rgba(91, 143, 199, 0.25);
+    }
+
+    .thinking-content {
+      padding: 12px;
+      color: var(--text-secondary);
+      font-size: 13px;
+      line-height: 1.5;
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+    }
+
+    .thinking-block.expanded .thinking-content {
+      max-height: 2000px;
+    }
+
+    .thinking-block.expanded .toggle-icon {
+      transform: rotate(90deg);
+    }
+
+    .toggle-icon {
+      transition: transform 0.3s;
+    }
+
+    .tool-call {
+      background: rgba(255, 197, 61, 0.08);
+      border-left: 3px solid var(--tool-color);
+      padding: 8px 12px;
+      margin: 6px 0;
+      border-radius: 3px;
+    }
+
+    .tool-name {
+      color: var(--tool-color);
+      font-weight: 500;
+      margin-bottom: 6px;
+      font-size: 13px;
+    }
+
+    .tool-args {
+      color: var(--text-secondary);
+      font-size: 12px;
+      font-family: 'SF Mono', 'Monaco', 'Cascadia Code', 'Courier New', monospace;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      word-break: break-all;
+      overflow-wrap: anywhere;
+      line-height: 1.4;
+      max-height: 300px;
+      overflow-y: auto;
+      background: rgba(0, 0, 0, 0.2);
+      padding: 8px;
+      border-radius: 3px;
+    }
+
+    .token-info {
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px solid var(--border-color);
+      color: var(--text-dim);
+      font-size: 11px;
+    }
+
+    .search-box {
+      flex: 1;
+      min-width: 200px;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--text-dim);
+    }
+
+    .empty-state-icon {
+      font-size: 48px;
+      margin-bottom: 10px;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: var(--text-secondary);
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 40px;
+      height: 40px;
+      border: 3px solid var(--border-color);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .auto-scroll-toggle {
+      position: fixed;
+      bottom: 30px;
+      right: 30px;
+      padding: 12px 20px;
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 25px;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      transition: all 0.3s;
+      z-index: 100;
+    }
+
+    .auto-scroll-toggle:hover {
+      background: var(--accent-hover);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+    }
+
+    .auto-scroll-toggle.disabled {
+      background: var(--bg-tertiary);
+      color: var(--text-secondary);
+    }
+
+    /* 自定义滚动条 */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--bg-primary);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--bg-tertiary);
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--border-color);
+    }
+
+    .tool-args::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+
+    @media (max-width: 768px) {
+      .container {
+        padding: 8px;
+      }
+
+      .controls {
+        flex-direction: column;
+      }
+
+      .message {
+        padding: 10px 12px;
+      }
+
+      .auto-scroll-toggle {
+        bottom: 16px;
+        right: 16px;
+        padding: 8px 14px;
+        font-size: 13px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>
+        🦞 Claw Watch
+        <span class="status" id="status"></span>
+      </h1>
+      <div class="controls">
+        <select id="agentSelector">
+          <option value="">Loading agents...</option>
+        </select>
+
+        <button id="refreshBtn">🔄 Refresh</button>
+
+        <div class="filter-group">
+          <button class="filter-btn active" data-role="all">All</button>
+          <button class="filter-btn" data-role="user">👤 User</button>
+          <button class="filter-btn" data-role="assistant">🤖 Assistant</button>
+        </div>
+
+        <label>
+          <input type="checkbox" id="showThinking" checked> Show Thinking
+        </label>
+
+        <label>
+          <input type="checkbox" id="autoScroll" checked> Auto Scroll
+        </label>
+
+        <input type="text" id="searchBox" class="search-box" placeholder="🔍 Search messages...">
+      </div>
+    </header>
+
+    <div id="messagesContainer" class="messages">
+      <div class="loading">
+        <div class="spinner"></div>
+        <p>Loading session...</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 状态管理
+    const state = {
+      ws: null,
+      messages: [],
+      currentAgent: 'main',
+      currentSessionPath: null,
+      filterRole: 'all',
+      showThinking: true,
+      autoScroll: true,
+      searchQuery: ''
+    };
+
+    // DOM 元素
+    const elements = {
+      status: document.getElementById('status'),
+      agentSelector: document.getElementById('agentSelector'),
+      refreshBtn: document.getElementById('refreshBtn'),
+      showThinking: document.getElementById('showThinking'),
+      autoScroll: document.getElementById('autoScroll'),
+      searchBox: document.getElementById('searchBox'),
+      messagesContainer: document.getElementById('messagesContainer'),
+      filterBtns: document.querySelectorAll('.filter-btn')
+    };
+
+    // 开始监控文件
+    function startWatching() {
+      if (!state.currentSessionPath) {
+        console.log('[Watch] No session path set');
+        return;
+      }
+
+      if (!state.ws || state.ws.readyState !== WebSocket.OPEN) {
+        console.log('[Watch] WebSocket not ready');
+        return;
+      }
+
+      console.log('[Watch] Starting to watch:', state.currentSessionPath);
+      state.ws.send(JSON.stringify({
+        type: 'watch',
+        path: state.currentSessionPath
+      }));
+    }
+
+    // 连接 WebSocket
+    function connectWebSocket() {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${protocol}//${window.location.host}`;
+
+      state.ws = new WebSocket(wsUrl);
+
+      state.ws.onopen = () => {
+        console.log('[WebSocket] Connected');
+        elements.status.classList.remove('disconnected');
+
+        // 连接成功后，如果有会话路径，立即开始监控
+        if (state.currentSessionPath) {
+          startWatching();
+        }
+      };
+
+      state.ws.onclose = () => {
+        console.log('[WebSocket] Disconnected');
+        elements.status.classList.add('disconnected');
+
+        // 3秒后重连
+        setTimeout(connectWebSocket, 3000);
+      };
+
+      state.ws.onerror = (error) => {
+        console.error('[WebSocket] Error:', error);
+      };
+
+      state.ws.onmessage = (event) => {
+        const message = JSON.parse(event.data);
+        console.log('[WebSocket] Received:', message.type);
+
+        if (message.type === 'update') {
+          console.log('[WebSocket] New message data:', message.data);
+          handleNewMessage(message.data);
+        } else if (message.type === 'watching') {
+          console.log('[WebSocket] Now watching:', message.path);
+        }
+      };
+    }
+
+    // 加载 agent 列表
+    async function loadAgents() {
+      try {
+        const res = await fetch('/api/agents');
+        const { agents } = await res.json();
+
+        elements.agentSelector.innerHTML = agents.map(name =>
+          `<option value="${name}" ${name === state.currentAgent ? 'selected' : ''}>${name}</option>`
+        ).join('');
+      } catch (error) {
+        console.error('Failed to load agents:', error);
+      }
+    }
+
+    // 加载会话
+    async function loadSession(agentName = 'main') {
+      state.currentAgent = agentName;
+
+      try {
+        // 获取最新会话文件
+        const sessionRes = await fetch(`/api/latest-session?agent=${agentName}`);
+        const session = await sessionRes.json();
+
+        if (session.error) {
+          showEmptyState('No session found');
+          return;
+        }
+
+        state.currentSessionPath = session.path;
+
+        // 读取会话内容
+        const dataRes = await fetch(`/api/session?path=${encodeURIComponent(session.path)}`);
+        const { data } = await dataRes.json();
+
+        state.messages = data;
+        renderMessages();
+
+        // 开始监控文件变化
+        startWatching();
+      } catch (error) {
+        console.error('Failed to load session:', error);
+        showEmptyState('Failed to load session');
+      }
+    }
+
+    // 处理新消息
+    function handleNewMessage(message) {
+      // 检查是否已存在（避免重复）
+      const exists = state.messages.some(msg =>
+        msg.timestamp === message.timestamp &&
+        msg.type === message.type
+      );
+
+      if (!exists) {
+        state.messages.push(message);
+        renderMessages();
+
+        // 实时更新时闪烁提示
+        if (message.type === 'message') {
+          const firstMessage = document.querySelector('.message');
+          if (firstMessage) {
+            firstMessage.style.animation = 'fadeIn 0.3s ease-in';
+          }
+        }
+      }
+    }
+
+    // 渲染消息列表
+    function renderMessages() {
+      const filtered = state.messages.filter(msg => {
+        if (msg.type !== 'message') return false;
+
+        const role = msg.message?.role || 'unknown';
+        const content = msg.message?.content || [];
+
+        // 过滤空消息
+        if (Array.isArray(content) && content.length === 0) {
+          return false;
+        }
+
+        // 检查是否所有内容项都为空
+        if (Array.isArray(content)) {
+          const hasContent = content.some(item => {
+            if (!item || typeof item !== 'object') return false;
+            if (item.type === 'text' && item.text && item.text.trim()) return true;
+            if (item.type === 'thinking' && state.showThinking && (item.thinking || item.text)) return true;
+            if (item.type === 'toolCall') return true;
+            if (item.type === 'toolResult') return true;
+            return false;
+          });
+          if (!hasContent) return false;
+        }
+
+        // 角色过滤
+        if (state.filterRole !== 'all' && role !== state.filterRole) {
+          return false;
+        }
+
+        // 搜索过滤
+        if (state.searchQuery) {
+          const contentStr = JSON.stringify(content).toLowerCase();
+          if (!contentStr.includes(state.searchQuery.toLowerCase())) {
+            return false;
+          }
+        }
+
+        return true;
+      });
+
+      if (filtered.length === 0) {
+        showEmptyState('No messages to display');
+        return;
+      }
+
+      // 按时间倒序排序（最新的在上面）
+      const sorted = filtered.sort((a, b) => {
+        const timeA = new Date(a.timestamp).getTime();
+        const timeB = new Date(b.timestamp).getTime();
+        return timeB - timeA; // 倒序
+      });
+
+      elements.messagesContainer.innerHTML = sorted.map(msg => renderMessage(msg)).join('');
+
+      // 自动滚动到顶部（因为最新消息在顶部）
+      if (state.autoScroll) {
+        window.scrollTo({
+          top: 0,
+          behavior: 'smooth'
+        });
+      }
+
+      // 添加思考块折叠事件
+      document.querySelectorAll('.thinking-header').forEach(header => {
+        header.addEventListener('click', () => {
+          header.parentElement.classList.toggle('expanded');
+        });
+      });
+    }
+
+    // 渲染单个消息
+    function renderMessage(msg) {
+      const message = msg.message || {};
+      const role = message.role || 'unknown';
+      const content = message.content || [];
+      const timestamp = new Date(msg.timestamp).toLocaleString('zh-CN');
+
+      const roleEmoji = role === 'user' ? '👤' : role === 'assistant' ? '🤖' : '⚙️';
+      const roleClass = `role-${role}`;
+
+      const contentHtml = renderContent(content);
+
+      // 构建元信息组
+      let metaItems = [`<div class="message-meta">${timestamp}</div>`];
+      if (message.model) {
+        metaItems.push(`<div class="message-meta">Model: ${message.model}</div>`);
+      }
+      const metaHtml = `<div class="message-meta-group">${metaItems.join('')}</div>`;
+
+      let tokenInfo = '';
+      if (message.usage && message.usage.totalTokens) {
+        tokenInfo = `
+          <div class="token-info">
+            📊 Tokens: ${message.usage.totalTokens} (in: ${message.usage.input}, out: ${message.usage.output})
+          </div>
+        `;
+      }
+
+      return `
+        <div class="message">
+          <div class="message-header">
+            <div class="message-role ${roleClass}">
+              ${roleEmoji} ${role.charAt(0).toUpperCase() + role.slice(1)}
+            </div>
+            ${metaHtml}
+          </div>
+          <div class="message-content">
+            ${contentHtml}
+          </div>
+          ${tokenInfo}
+        </div>
+      `;
+    }
+
+    // 渲染消息内容
+    function renderContent(content) {
+      if (!Array.isArray(content)) {
+        return escapeHtml(String(content));
+      }
+
+      return content.map(item => {
+        if (typeof item !== 'object') return '';
+
+        if (item.type === 'text') {
+          return escapeHtml(item.text || '');
+        }
+
+        if (item.type === 'thinking' && state.showThinking) {
+          const thinkingText = escapeHtml(item.thinking || item.text || '');
+          return `
+            <div class="thinking-block">
+              <div class="thinking-header">
+                <span class="toggle-icon">▶</span>
+                <span>💭 Thinking</span>
+              </div>
+              <div class="thinking-content">${thinkingText}</div>
+            </div>
+          `;
+        }
+
+        if (item.type === 'toolCall') {
+          const toolName = item.name || 'unknown';
+          const args = item.arguments ? JSON.stringify(item.arguments, null, 2) : '';
+          return `
+            <div class="tool-call">
+              <div class="tool-name">🔧 Tool: ${toolName}</div>
+              ${args ? `<pre class="tool-args">${escapeHtml(args)}</pre>` : ''}
+            </div>
+          `;
+        }
+
+        if (item.type === 'toolResult') {
+          return '<div class="tool-call"><div class="tool-name">✓ Tool Result</div></div>';
+        }
+
+        return '';
+      }).join('');
+    }
+
+    // 显示空状态
+    function showEmptyState(message) {
+      elements.messagesContainer.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-state-icon">📭</div>
+          <p>${message}</p>
+        </div>
+      `;
+    }
+
+    // HTML 转义
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // 事件监听
+    elements.agentSelector.addEventListener('change', (e) => {
+      loadSession(e.target.value);
+    });
+
+    elements.refreshBtn.addEventListener('click', () => {
+      loadSession(state.currentAgent);
+    });
+
+    elements.showThinking.addEventListener('change', (e) => {
+      state.showThinking = e.target.checked;
+      renderMessages();
+    });
+
+    elements.autoScroll.addEventListener('change', (e) => {
+      state.autoScroll = e.target.checked;
+    });
+
+    elements.searchBox.addEventListener('input', (e) => {
+      state.searchQuery = e.target.value;
+      renderMessages();
+    });
+
+    elements.filterBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        elements.filterBtns.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        state.filterRole = btn.dataset.role;
+        renderMessages();
+      });
+    });
+
+    // 初始化
+    async function init() {
+      // 先连接 WebSocket（异步，不等待）
+      connectWebSocket();
+
+      // 加载 agents 和会话
+      await loadAgents();
+      await loadSession(state.currentAgent);
+    }
+
+    init();
+  </script>
+</body>
+</html>
