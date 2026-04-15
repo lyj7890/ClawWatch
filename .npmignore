@@ -1,0 +1,30 @@
+# npm 发布时忽略的文件（优先级高于 .gitignore）
+
+# 开发文件
+frontend/src/
+frontend/public/
+frontend/node_modules/
+frontend/.vscode/
+frontend/vite.config.*
+frontend/tailwind.config.*
+frontend/postcss.config.*
+
+# 运行时文件
+*.log
+*.pid
+*.tmp
+
+# 脚本（已被 bin/ 替代）
+clawwatch.sh
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# 测试和配置
+.gitignore
+node_modules/
+
+# macOS
+.DS_Store

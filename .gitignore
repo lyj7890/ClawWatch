@@ -7,7 +7,7 @@
 # Node.js
 node_modules/
 
-# 前端构建产物
+# 前端构建产物（npm 发布时通过 files 字段包含，git 中不跟踪）
 frontend/dist/
 
 # 临时文件

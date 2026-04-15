@@ -1,0 +1,9 @@
+# 发布时只包含 dist/，排除源码和依赖
+src/
+public/
+node_modules/
+*.config.*
+*.local
+.vscode/
+.idea/
+*.log
