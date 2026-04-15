@@ -90,6 +90,14 @@ clawwatch logs
 
 Sessions 不更新？检查 OpenClaw 会话路径：`~/.openclaw/agents/main/sessions/`
 
+## 🗺️ Roadmap
+
+- [ ] **远端模式（Hub-and-Spoke）**
+  - `clawwatch agent` — 本地监控，主动推送到 Hub
+  - `clawwatch hub` — 公网中继服务器，支持多 Agent 接入
+  - `clawwatch console` — 浏览器连接 Hub 远程查看
+  - 适合手机随时查看 Agent 状态，或多人共享 Agent 运行情况
+
 ## 📄 许可证
 
 MIT
