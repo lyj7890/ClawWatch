@@ -34,5 +34,13 @@
   "license": "MIT",
   "dependencies": {
     "ws": "^8.18.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lyj7890/ClawWatch.git"
+  },
+  "homepage": "https://github.com/lyj7890/ClawWatch",
+  "bugs": {
+    "url": "https://github.com/lyj7890/ClawWatch/issues"
   }
 }
