@@ -1,10 +1,10 @@
 {
-  "name": "claw-watch",
+  "name": "@lyj7890/claw-watch",
   "version": "1.0.0",
   "description": "ClawWatch - OpenClaw 实时会话监控器",
   "main": "web-viewer-server.js",
   "bin": {
-    "clawwatch": "./bin/clawwatch.js"
+    "clawwatch": "bin/clawwatch.js"
   },
   "files": [
     "bin/",
