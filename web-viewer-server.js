@@ -185,7 +185,7 @@ const server = http.createServer((req, res) => {
     }
 
     const sessions = fs.readdirSync(agentDir)
-      .filter(f => f.endsWith('.jsonl') && !f.includes('.trajectory.') && !f.endsWith('.lock'))
+      .filter(f => f.endsWith('.jsonl') && !f.includes('.trajectory') && !f.includes('.checkpoint') && !f.endsWith('.lock'))
       .map(f => {
         const filePath = path.join(agentDir, f);
         const stats = fs.statSync(filePath);
