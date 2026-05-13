@@ -208,21 +208,26 @@ function showHelp() {
 Usage: clawwatch [command]
 
 Commands:
-  start           Start the server (default)
+  start           Start the local web monitor server (default)
   stop            Stop the server
   restart         Restart the server
   status          Show server status
   logs            Show recent logs
   logs --follow   Follow logs in real-time
+  agent           Push local session logs to a remote Hub
   help            Show this help
 
+Agent Options (clawwatch agent):
+  --hub <url>     Hub WebSocket URL (or HUB_URL env)
+  --id  <name>    Agent ID, default: hostname (or HUB_AGENT_ID env)
+  --token <tok>   Hub agent token (or HUB_AGENT_TOKEN env)
+  --dir <path>    Watch directory, default: ~/.openclaw/agents
+
 Examples:
-  clawwatch             # Start the server
-  clawwatch start       # Start the server
-  clawwatch stop        # Stop the server
-  clawwatch restart     # Restart the server
-  clawwatch status      # Check status
-  clawwatch logs -f     # Follow logs
+  clawwatch                         # Start local web monitor
+  clawwatch agent --hub ws://hub:4848   # Push logs to Hub
+  clawwatch stop                    # Stop local server
+  clawwatch logs -f                 # Follow logs
 
 URL: http://localhost:${PORT}
 `);
@@ -237,6 +242,21 @@ URL: http://localhost:${PORT}
     case 'start':
       await start();
       break;
+    case 'agent': {
+      const { AgentPusher } = require('../lib/agent-pusher');
+      // 解析 --key value 参数
+      const argMap = {};
+      for (let i = 0; i < args.length - 1; i++) {
+        if (args[i].startsWith('--')) argMap[args[i].slice(2)] = args[i + 1];
+      }
+      new AgentPusher({
+        hubUrl:  argMap.hub   || process.env.HUB_URL,
+        agentId: argMap.id    || process.env.HUB_AGENT_ID,
+        token:   argMap.token || process.env.HUB_AGENT_TOKEN,
+        watchDir: argMap.dir  || process.env.HUB_WATCH_DIR,
+      }).start();
+      break;
+    }
     case 'stop':
       await stop();
       break;

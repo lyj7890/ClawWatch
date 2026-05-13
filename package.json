@@ -8,6 +8,7 @@
   },
   "files": [
     "bin/",
+    "lib/",
     "web-viewer-server.js",
     "frontend/dist"
   ],
