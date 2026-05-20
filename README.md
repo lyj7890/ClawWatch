@@ -1,11 +1,17 @@
 # ClawWatch 🦞
 
-OpenClaw 实时会话监控器 - 现代化的 Web 界面，用于实时查看和监控 OpenClaw 会话日志。
+OpenClaw / Hermes 实时会话监控器 - 现代化的 Web 界面，用于实时查看和监控会话日志。
+
+支持 OpenClaw 和 Hermes Agent 两种模式。
 
 ## 🚀 快速开始
 
 ```bash
+# OpenClaw 模式
 npx @lyj7890/claw-watch
+
+# Hermes 模式
+npx @lyj7890/claw-watch start --hermes
 ```
 
 访问：**http://localhost:3939**
@@ -88,7 +94,10 @@ lsof -i :3939
 clawwatch logs
 ```
 
-Sessions 不更新？检查 OpenClaw 会话路径：`~/.openclaw/agents/main/sessions/`
+Sessions 不更新？检查会话路径：
+
+- OpenClaw：`~/.openclaw/agents/main/sessions/`
+- Hermes：`~/.hermes/sessions/`
 
 ## 🗺️ Roadmap
 

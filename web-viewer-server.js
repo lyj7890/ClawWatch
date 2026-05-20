@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Claw Watch - Backend Server
- * OpenClaw 实时会话监控器 - 提供 WebSocket 实时推送和 HTTP API
+ * OpenClaw / Hermes 实时会话监控器 - 提供 WebSocket 实时推送和 HTTP API
  */
 const http = require('http');
 const fs = require('fs');
@@ -9,7 +9,12 @@ const path = require('path');
 const { WebSocketServer } = require('ws');
 
 const PORT = process.env.PORT || 3939;
-const OPENCLAW_DIR = path.join(process.env.HOME, '.openclaw');
+
+// ── 模式检测 ──
+const MODE = process.argv.includes('--hermes') ? 'hermes' : 'openclaw';
+const SESSION_DIR = MODE === 'hermes'
+  ? path.join(process.env.HOME, '.hermes', 'sessions')
+  : path.join(process.env.HOME, '.openclaw', 'agents');
 
 // 存储所有活跃的 WebSocket 连接
 const clients = new Map();
@@ -18,24 +23,90 @@ const clients = new Map();
 const watchers = new Map();
 
 /**
- * 查找指定 agent 的最新会话文件
+ * Hermes → OpenClaw 格式转换
+ * Hermes:  { role, content (string/JSON), timestamp, model, ... }
+ * OpenClaw: { type: "message", timestamp, message: { role, content: [{type, text}], model, usage } }
  */
-function findLatestSession(agentName = 'main') {
-  const agentDir = path.join(OPENCLAW_DIR, 'agents', agentName, 'sessions');
+function hermesToOpenClawFormat(msg) {
+  const role = msg.role || 'unknown';
+  const rawContent = msg.content || '';
 
-  if (!fs.existsSync(agentDir)) {
-    return null;
+  // 构建 content 数组 (OpenClaw 格式)
+  let contentArray;
+  if (role === 'tool') {
+    // Hermes tool 消息: content 是 JSON 字符串 (tool result/error)
+    contentArray = [{ type: 'text', text: typeof rawContent === 'string' ? rawContent : JSON.stringify(rawContent) }];
+  } else if (role === 'assistant' || role === 'user') {
+    // Hermes assistant/user: content 是纯文本或 markdown
+    contentArray = [{ type: 'text', text: typeof rawContent === 'string' ? rawContent : JSON.stringify(rawContent) }];
+  } else if (role === 'session_meta') {
+    // Hermes session_meta: 第一行元数据，显示为 system 消息
+    contentArray = [{ type: 'text', text: typeof rawContent === 'string' ? rawContent : JSON.stringify(rawContent) }];
+  } else {
+    contentArray = [{ type: 'text', text: typeof rawContent === 'string' ? rawContent : JSON.stringify(rawContent) }];
   }
 
-  const files = fs.readdirSync(agentDir)
-    .filter(f => f.endsWith('.jsonl') && !f.includes('.trajectory.') && !f.endsWith('.lock'))
-    .map(f => ({
-      name: f,
-      path: path.join(agentDir, f),
-      mtime: fs.statSync(path.join(agentDir, f)).mtime
-    }))
-    .sort((a, b) => b.mtime - a.mtime);
+  return {
+    type: 'message',
+    timestamp: msg.timestamp || msg.created_at || new Date().toISOString(),
+    message: {
+      role: role === 'session_meta' ? 'system' : role,
+      content: contentArray,
+      model: msg.model || null,
+      usage: msg.usage || null,
+      session_id: msg.session_id || null
+    }
+  };
+}
 
+/**
+ * 列出所有会话文件 (Hermes: 扁平目录, OpenClaw: agent 子目录)
+ */
+function listSessionFiles(agentName) {
+  if (MODE === 'hermes') {
+    if (!fs.existsSync(SESSION_DIR)) return [];
+    return fs.readdirSync(SESSION_DIR)
+      .filter(f => f.endsWith('.jsonl'))
+      .map(f => {
+        const filePath = path.join(SESSION_DIR, f);
+        const stats = fs.statSync(filePath);
+        return {
+          name: f,
+          path: filePath,
+          mtime: stats.mtime,
+          size: stats.size
+        };
+      })
+      .sort((a, b) => b.mtime - a.mtime);
+  }
+
+  // OpenClaw mode
+  const dir = agentName
+    ? path.join(SESSION_DIR, agentName, 'sessions')
+    : path.join(SESSION_DIR, 'main', 'sessions');
+
+  if (!fs.existsSync(dir)) return [];
+
+  return fs.readdirSync(dir)
+    .filter(f => f.endsWith('.jsonl') && !f.includes('.trajectory') && !f.includes('.checkpoint') && !f.endsWith('.lock'))
+    .map(f => {
+      const filePath = path.join(dir, f);
+      const stats = fs.statSync(filePath);
+      return {
+        name: f,
+        path: filePath,
+        mtime: stats.mtime,
+        size: stats.size
+      };
+    })
+    .sort((a, b) => b.mtime - a.mtime);
+}
+
+/**
+ * 查找最新的会话文件
+ */
+function findLatestSession(agentName = 'main') {
+  const files = listSessionFiles(agentName);
   return files.length > 0 ? files[0] : null;
 }
 
@@ -43,7 +114,12 @@ function findLatestSession(agentName = 'main') {
  * 获取所有可用的 agent 列表
  */
 function getAgentList() {
-  const agentsDir = path.join(OPENCLAW_DIR, 'agents');
+  if (MODE === 'hermes') {
+    // Hermes 没有 agent 概念，返回单个 'hermes' agent
+    return ['hermes'];
+  }
+
+  const agentsDir = SESSION_DIR;
 
   if (!fs.existsSync(agentsDir)) {
     return [];
@@ -57,7 +133,7 @@ function getAgentList() {
 }
 
 /**
- * 读取会话文件内容
+ * 读取会话文件内容并转为 OpenClaw 兼容格式
  */
 function readSessionFile(filePath) {
   if (!fs.existsSync(filePath)) {
@@ -69,7 +145,9 @@ function readSessionFile(filePath) {
 
   return lines.map((line, index) => {
     try {
-      return JSON.parse(line);
+      const parsed = JSON.parse(line);
+      // Hermes 模式: 转换为 OpenClaw 格式; OpenClaw 模式: 保持原样
+      return MODE === 'hermes' ? hermesToOpenClawFormat(parsed) : parsed;
     } catch (e) {
       return null;
     }
@@ -175,8 +253,24 @@ const server = http.createServer((req, res) => {
 
   // API: 获取指定 agent 的所有 sessions
   if (url.pathname === '/api/sessions') {
-    const agentName = url.searchParams.get('agent') || 'main';
-    const agentDir = path.join(OPENCLAW_DIR, 'agents', agentName, 'sessions');
+    const agentName = url.searchParams.get('agent') || (MODE === 'hermes' ? 'hermes' : 'main');
+
+    if (MODE === 'hermes') {
+      const files = listSessionFiles();
+      const sessions = files.map(f => ({
+        id: f.name.replace('.jsonl', ''),
+        path: f.path,
+        mtime: f.mtime,
+        size: f.size
+      }));
+
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ sessions }));
+      return;
+    }
+
+    // OpenClaw mode
+    const agentDir = path.join(SESSION_DIR, agentName, 'sessions');
 
     if (!fs.existsSync(agentDir)) {
       res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -205,7 +299,7 @@ const server = http.createServer((req, res) => {
 
   // API: 获取指定 agent 的最新会话
   if (url.pathname === '/api/latest-session') {
-    const agentName = url.searchParams.get('agent') || 'main';
+    const agentName = url.searchParams.get('agent') || (MODE === 'hermes' ? 'hermes' : 'main');
     const session = findLatestSession(agentName);
 
     if (!session) {
@@ -326,12 +420,14 @@ wss.on('connection', (ws, req) => {
 
 // 启动服务器
 server.listen(PORT, () => {
+  const modeLabel = MODE === 'hermes' ? 'Hermes' : 'OpenClaw';
+  const modeDir = MODE === 'hermes' ? path.join(process.env.HOME, '.hermes', 'sessions') : path.join(process.env.HOME, '.openclaw');
   console.log(`
 ╭────────────────────────────────────────────────────╮
-│  🦞 Claw Watch - Server Running                    │
+│  🦞 Claw Watch - Server Running (${modeLabel} mode)        │
 ├────────────────────────────────────────────────────┤
 │  🌐 URL: http://localhost:${PORT}                   │
-│  📁 OpenClaw: ${OPENCLAW_DIR}
+│  📁 ${modeLabel}: ${modeDir}
 │  🔌 WebSocket: ws://localhost:${PORT}               │
 ╰────────────────────────────────────────────────────╯
 

@@ -44,6 +44,10 @@ async function start() {
     return;
   }
 
+  // Check for --hermes flag
+  const isHermes = process.argv.includes('--hermes');
+  const modeLabel = isHermes ? 'Hermes' : 'OpenClaw';
+
   // 检查前端是否已构建
   const distPath = path.join(__dirname, '..', 'frontend', 'dist', 'index.html');
   if (!fs.existsSync(distPath)) {
@@ -56,10 +60,13 @@ async function start() {
     }
   }
 
-  console.log('🚀 Starting ClawWatch...');
+  console.log(`🚀 Starting ClawWatch (${modeLabel} mode)...`);
+
+  const serverArgs = [SERVER_FILE];
+  if (isHermes) serverArgs.push('--hermes');
 
   const logStream = fs.openSync(LOG_FILE, 'a');
-  const child = spawn(process.execPath, [SERVER_FILE], {
+  const child = spawn(process.execPath, serverArgs, {
     detached: true,
     stdio: ['ignore', logStream, logStream],
     env: { ...process.env, PORT: String(PORT) }
@@ -203,12 +210,13 @@ function buildFrontend() {
 }
 
 function showHelp() {
-  console.log(`🦞 ClawWatch - OpenClaw Session Monitor
+  console.log(`🦞 ClawWatch - Session Monitor (OpenClaw + Hermes)
 
-Usage: clawwatch [command]
+Usage: clawwatch [command] [options]
 
 Commands:
   start           Start the local web monitor server (default)
+  start --hermes  Start in Hermes mode (~/.hermes/sessions/)
   stop            Stop the server
   restart         Restart the server
   status          Show server status
@@ -217,14 +225,9 @@ Commands:
   agent           Push local session logs to a remote Hub
   help            Show this help
 
-Agent Options (clawwatch agent):
-  --hub <url>     Hub WebSocket URL (or HUB_URL env)
-  --id  <name>    Agent ID, default: hostname (or HUB_AGENT_ID env)
-  --token <tok>   Hub agent token (or HUB_AGENT_TOKEN env)
-  --dir <path>    Watch directory, default: ~/.openclaw/agents
-
 Examples:
-  clawwatch                         # Start local web monitor
+  clawwatch                         # OpenClaw mode
+  clawwatch start --hermes          # Hermes mode
   clawwatch agent --hub ws://hub:4848   # Push logs to Hub
   clawwatch stop                    # Stop local server
   clawwatch logs -f                 # Follow logs
