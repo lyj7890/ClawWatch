@@ -3,7 +3,8 @@
     class="rounded border transition shadow-sm"
     :class="{
       'bg-blue-50 border-blue-200 hover:border-blue-300': role === 'user',
-      'bg-white border-gray-200 hover:border-gray-300': role === 'assistant',
+      'bg-white border-gray-200 hover:border-gray-300': role === 'assistant' && !errorMessage,
+      'bg-red-50/30 border-red-200 hover:border-red-300': role === 'assistant' && errorMessage,
       'bg-gray-50 border-gray-200 hover:border-gray-300': role === 'tool'
     }"
   >
@@ -12,7 +13,8 @@
       class="px-4 py-2 border-b flex items-center justify-between text-sm"
       :class="{
         'border-blue-200 bg-blue-100/50': role === 'user',
-        'border-gray-200 bg-gray-50': role === 'assistant',
+        'border-gray-200 bg-gray-50': role === 'assistant' && !errorMessage,
+        'border-red-200 bg-red-50': role === 'assistant' && errorMessage,
         'border-gray-200': role === 'tool'
       }"
     >
@@ -33,6 +35,18 @@
         <span v-if="message.message?.model">{{ message.message.model }}</span>
         <span v-if="tokenInfo">📊 {{ tokenInfo }}</span>
       </div>
+    </div>
+
+    <!-- Error Banner -->
+    <div 
+      v-if="errorMessage" 
+      class="px-4 py-2 bg-red-50 border-b border-red-200 flex items-center gap-2"
+    >
+      <span class="text-red-500 text-sm">⚠️</span>
+      <span class="text-red-700 text-xs font-medium">Model Error</span>
+      <span class="text-red-600 text-xs">·</span>
+      <span class="text-red-600 text-xs">{{ errorMessage }}</span>
+      <span v-if="errorProvider" class="text-red-400 text-xs ml-1">({{ errorProvider }}/{{ errorModel }})</span>
     </div>
 
     <!-- Content -->
@@ -173,7 +187,17 @@ const argsExpanded = ref({})
 const resultExpanded = ref({})
 
 const role = computed(() => props.message.message?.role || 'unknown')
-const content = computed(() => props.message.message?.content || [])
+const content = computed(() => {
+  const raw = props.message.message?.content || []
+  // Filter out the generic failure placeholder when we have an actual errorMessage
+  if (props.message.message?.errorMessage) {
+    return raw.filter(item => !(item.type === 'text' && item.text === '[assistant turn failed before producing content]'))
+  }
+  return raw
+})
+const errorMessage = computed(() => props.message.message?.errorMessage || null)
+const errorProvider = computed(() => props.message.message?.provider || null)
+const errorModel = computed(() => props.message.message?.model || null)
 
 const roleIcon = computed(() => {
   const icons = {
