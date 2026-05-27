@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Verify package files
+        run: |
+          echo "📦 Checking build output..."
+          test -f frontend/dist/index.html && echo "✅ index.html exists" || { echo "❌ index.html missing"; exit 1; }
+          test -d frontend/dist/assets && echo "✅ assets/ exists" || { echo "❌ assets/ missing"; exit 1; }
+          echo "✅ Build verification passed"
