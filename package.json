@@ -1,6 +1,6 @@
 {
   "name": "@lyj7890/claw-watch",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "ClawWatch - OpenClaw 实时会话监控器",
   "main": "web-viewer-server.js",
   "bin": {
