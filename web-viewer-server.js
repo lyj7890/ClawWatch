@@ -133,6 +133,23 @@ function getAgentList() {
 }
 
 /**
+ * 归一化 content 字段：确保始终为 [{type, text}] 数组格式
+ * OpenClaw 新版 user message 的 content 可能是纯字符串，需要兼容
+ */
+function normalizeContent(msg) {
+  if (!msg || !msg.message) return msg;
+  const c = msg.message.content;
+  if (typeof c === 'string') {
+    msg.message.content = [{ type: 'text', text: c }];
+  } else if (Array.isArray(c)) {
+    // 已经是数组，保持原样
+  } else if (c == null) {
+    msg.message.content = [];
+  }
+  return msg;
+}
+
+/**
  * 读取会话文件内容并转为 OpenClaw 兼容格式
  */
 function readSessionFile(filePath) {
@@ -146,8 +163,9 @@ function readSessionFile(filePath) {
   return lines.map((line, index) => {
     try {
       const parsed = JSON.parse(line);
-      // Hermes 模式: 转换为 OpenClaw 格式; OpenClaw 模式: 保持原样
-      return MODE === 'hermes' ? hermesToOpenClawFormat(parsed) : parsed;
+      // Hermes 模式: 转换为 OpenClaw 格式; OpenClaw 模式: 归一化 content
+      if (MODE === 'hermes') return hermesToOpenClawFormat(parsed);
+      return normalizeContent(parsed);
     } catch (e) {
       return null;
     }
@@ -186,12 +204,13 @@ function watchSessionFile(filePath, clientId) {
           try {
             const data = JSON.parse(line);
 
-            // 发送给客户端
+            // 归一化 content 后发送给客户端
+            const normalized = MODE === 'hermes' ? hermesToOpenClawFormat(data) : normalizeContent(data);
             const client = clients.get(clientId);
             if (client && client.readyState === 1) {
               client.send(JSON.stringify({
                 type: 'update',
-                data: data
+                data: normalized
               }));
             }
           } catch (e) {
