@@ -129,7 +129,7 @@
       </aside>
 
       <!-- Message List -->
-      <main class="flex-1 overflow-y-auto">
+      <main ref="messageListEl" class="flex-1 overflow-y-auto relative" @scroll="onScroll">
         <div v-if="loading" class="flex items-center justify-center h-full">
           <div class="text-gray-600">Loading...</div>
         </div>
@@ -147,6 +147,17 @@
             :force-expand-thinking="forceExpandThinking"
             :force-expand-args="forceExpandArgs"
           />
+        </div>
+
+        <!-- 暂停自动滚动提示 -->
+        <div 
+          v-if="autoScrollPaused" 
+          @click="resumeAutoScroll"
+          class="sticky bottom-4 left-1/2 -translate-x-1/2 cursor-pointer bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-full shadow-lg text-sm font-medium transition-all flex items-center gap-2 z-10"
+        >
+          <span>⏸</span>
+          <span>自动滚动已暂停</span>
+          <span class="text-blue-200">· 点击恢复</span>
         </div>
       </main>
     </div>
@@ -175,6 +186,8 @@ const forceExpandArgs = ref(0)
 const allThinkingExpanded = ref(false)
 const allArgsExpanded = ref(false)
 const sortOrder = ref('desc') // 'desc' = 最新在上, 'asc' = 最旧在上
+const autoScrollPaused = ref(false)
+const messageListEl = ref(null)
 
 // 最近活跃的 sessions (最多5个)
 const recentSessions = computed(() => {
@@ -280,6 +293,30 @@ const filteredMessages = computed(() => {
     return sortOrder.value === 'desc' ? timeB - timeA : timeA - timeB
   })
 })
+
+// 自动滚动控制
+function onScroll() {
+  const el = messageListEl.value
+  if (!el) return
+  // 判断是否在底部（距离底部 80px 以内算"在底部"）
+  const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80
+  if (!atBottom && !autoScrollPaused.value) {
+    autoScrollPaused.value = true
+  }
+}
+
+function resumeAutoScroll() {
+  autoScrollPaused.value = false
+  // 如果是 desc 排序（最新在上），滚到顶部；asc（最新在下），滚到底部
+  const el = messageListEl.value
+  if (el) {
+    if (sortOrder.value === 'desc') {
+      el.scrollTop = 0
+    } else {
+      el.scrollTop = el.scrollHeight
+    }
+  }
+}
 
 // 排序切换
 function toggleSortOrder() {
@@ -420,7 +457,26 @@ function startPolling() {
           // 如果是当前 session，直接更新消息
           if (session.id === currentSessionId.value) {
             if (data.length > messages.value.length) {
+              const wasAtBottom = (() => {
+                const el = messageListEl.value
+                if (!el) return true
+                return el.scrollHeight - el.scrollTop - el.clientHeight < 80
+              })()
               messages.value = data
+              // 只有没暂停且原来在底部时才自动滚动
+              if (!autoScrollPaused.value && wasAtBottom) {
+                // Vue nextTick 后滚动
+                setTimeout(() => {
+                  const el = messageListEl.value
+                  if (el) {
+                    if (sortOrder.value === 'desc') {
+                      el.scrollTop = 0
+                    } else {
+                      el.scrollTop = el.scrollHeight
+                    }
+                  }
+                }, 50)
+              }
             }
             sessionMessageCounts.value[session.id] = {
               count: currentCount,

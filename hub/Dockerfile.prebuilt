@@ -1,0 +1,18 @@
+# 使用预编译的 linux/amd64 二进制，基础镜像用 Harbor 内已有的 alpine
+# 构建方式: 本地 Go 交叉编译 → 打入镜像，无需从 DockerHub 拉取 golang 镜像
+FROM --platform=linux/amd64 hub.intra.mlamp.cn/public/alpine:latest
+
+RUN apk add --no-cache ca-certificates tzdata
+
+WORKDIR /app
+
+# 直接 COPY 预编译好的 amd64 二进制
+COPY clawwatch-hub-linux-amd64 ./clawwatch-hub
+RUN chmod +x ./clawwatch-hub
+
+EXPOSE 4848
+
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD wget -qO- http://localhost:4848/api/health || exit 1
+
+CMD ["./clawwatch-hub", "--port", "4848"]
