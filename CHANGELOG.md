@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.0.10 (2026-06-01)
+
+### Bug Fixes
+- **fix: 暂停按钮改用 fixed 定位**
+  - 原 `sticky` 在滚动容器内定位不可靠，改为 `fixed bottom-6 left-1/2` 居中显示
+  - z-index 提升至 50，确保始终显示在最顶层
+
 ## v1.0.9 (2026-06-01)
 
 ### New Features

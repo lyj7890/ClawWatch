@@ -149,17 +149,18 @@
           />
         </div>
 
-        <!-- 暂停自动滚动提示 -->
-        <div 
-          v-if="autoScrollPaused" 
-          @click="resumeAutoScroll"
-          class="sticky bottom-4 left-1/2 -translate-x-1/2 cursor-pointer bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-full shadow-lg text-sm font-medium transition-all flex items-center gap-2 z-10"
-        >
-          <span>⏸</span>
-          <span>自动滚动已暂停</span>
-          <span class="text-blue-200">· 点击恢复</span>
-        </div>
       </main>
+
+      <!-- 暂停自动滚动提示（fixed 居中，不受滚动容器影响） -->
+      <div 
+        v-if="autoScrollPaused" 
+        @click="resumeAutoScroll"
+        class="fixed bottom-6 left-1/2 -translate-x-1/2 cursor-pointer bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-full shadow-lg text-sm font-medium transition-all flex items-center gap-2 z-50"
+      >
+        <span>⏸</span>
+        <span>自动滚动已暂停</span>
+        <span class="text-blue-200">· 点击恢复</span>
+      </div>
     </div>
   </div>
 </template>
