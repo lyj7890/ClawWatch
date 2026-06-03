@@ -1,5 +1,44 @@
 <template>
+  <!-- ── 元数据事件（session / model_change / thinking_level_change / custom*）── -->
+  <div v-if="isMetaEvent" class="flex items-center gap-3 py-1 px-2">
+    <div class="flex-1 h-px bg-gray-200"></div>
+    <div class="flex items-center gap-1.5 text-xs text-gray-400 whitespace-nowrap">
+      <span>{{ metaIcon }}</span>
+      <span>{{ metaLabel }}</span>
+      <span class="text-gray-300">·</span>
+      <span>{{ timestamp }}</span>
+    </div>
+    <div class="flex-1 h-px bg-gray-200"></div>
+  </div>
+
+  <!-- ── System / Context 消息（custom_message: openclaw.runtime-context）── -->
+  <div v-else-if="isSystemContext"
+    class="rounded border border-purple-200 bg-purple-50 shadow-sm"
+  >
+    <div class="px-4 py-2 border-b border-purple-200 bg-purple-100/50 flex items-center justify-between text-sm">
+      <div class="flex items-center gap-2">
+        <span>📌</span>
+        <span class="font-medium text-purple-700">System Context</span>
+        <span class="text-purple-400">·</span>
+        <span class="text-purple-500 text-xs">{{ timestamp }}</span>
+      </div>
+      <button @click="contextExpanded = !contextExpanded" class="text-xs text-purple-500 hover:text-purple-700">
+        {{ contextExpanded ? '▼ collapse' : '▶ expand' }}
+      </button>
+    </div>
+    <div v-if="contextExpanded" class="px-4 py-3">
+      <div class="text-xs text-gray-700 whitespace-pre-wrap font-mono leading-relaxed max-h-96 overflow-y-auto bg-white rounded border border-purple-100 p-3">
+        {{ message.content }}
+      </div>
+    </div>
+    <div v-else class="px-4 py-2">
+      <div class="text-xs text-purple-400 italic truncate">{{ contextPreview }}</div>
+    </div>
+  </div>
+
+  <!-- ── 普通会话消息（user / assistant）── -->
   <div 
+    v-else
     class="rounded border transition shadow-sm"
     :class="{
       'bg-blue-50 border-blue-200 hover:border-blue-300': role === 'user',
@@ -163,6 +202,7 @@
       </div>
     </div>
   </div>
+  <!-- end v-else (normal message) -->
 </template>
 
 <script setup>
@@ -185,6 +225,42 @@ const props = defineProps({
 const thinkingExpanded = ref(false)
 const argsExpanded = ref({})
 const resultExpanded = ref({})
+const contextExpanded = ref(false)
+
+// ── 元数据事件判断──
+const META_TYPES = ['session', 'model_change', 'thinking_level_change', 'custom']
+const isMetaEvent = computed(() => {
+  const t = props.message.type
+  return t && t !== 'message' && t !== 'custom_message' && META_TYPES.includes(t)
+})
+
+const isSystemContext = computed(() => {
+  return props.message.type === 'custom_message' && props.message.customType === 'openclaw.runtime-context'
+})
+
+const metaIcon = computed(() => {
+  const icons = {
+    session: '📦',
+    model_change: '🧠',
+    thinking_level_change: '💡',
+    custom: 'ℹ️'
+  }
+  return icons[props.message.type] || '•'
+})
+
+const metaLabel = computed(() => {
+  const t = props.message.type
+  if (t === 'session') return `Session started · v${props.message.version}`
+  if (t === 'model_change') return `Model → ${props.message.provider}/${props.message.modelId}`
+  if (t === 'thinking_level_change') return `Thinking → ${props.message.thinkingLevel}`
+  if (t === 'custom') return `${props.message.customType || 'custom'}`
+  return t
+})
+
+const contextPreview = computed(() => {
+  const c = props.message.content || ''
+  return c.replace(/\n/g, ' ').slice(0, 120) + (c.length > 120 ? '...' : '')
+})
 
 const role = computed(() => props.message.message?.role || 'unknown')
 const content = computed(() => {

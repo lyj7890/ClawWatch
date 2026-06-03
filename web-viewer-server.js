@@ -165,6 +165,8 @@ function readSessionFile(filePath) {
       const parsed = JSON.parse(line);
       // Hermes 模式: 转换为 OpenClaw 格式; OpenClaw 模式: 归一化 content
       if (MODE === 'hermes') return hermesToOpenClawFormat(parsed);
+      // 非 message 类型的行（session/model_change/custom_message 等）也透传给前端
+      if (parsed.type !== 'message') return parsed;
       return normalizeContent(parsed);
     } catch (e) {
       return null;
@@ -204,8 +206,15 @@ function watchSessionFile(filePath, clientId) {
           try {
             const data = JSON.parse(line);
 
-            // 归一化 content 后发送给客户端
-            const normalized = MODE === 'hermes' ? hermesToOpenClawFormat(data) : normalizeContent(data);
+            // 归一化 content 后发送给客户端（非 message 类型直接透传）
+            let normalized;
+            if (MODE === 'hermes') {
+              normalized = hermesToOpenClawFormat(data);
+            } else if (data.type !== 'message') {
+              normalized = data;
+            } else {
+              normalized = normalizeContent(data);
+            }
             const client = clients.get(clientId);
             if (client && client.readyState === 1) {
               client.send(JSON.stringify({

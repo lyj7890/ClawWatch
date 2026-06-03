@@ -65,8 +65,8 @@ clawwatch logs     # 查看日志
 
 ## 📖 使用说明
 
-### Session Tabs
-顶部显示最近 5 个活跃 sessions，🔴 红点标记最新，点击可切换。
+### Session 列表
+Sidebar 左侧按 **agent 主机名**分组展示所有 sessions，点击 agent 名可展开/折叠。Session 列表无数量限制，可无限滚动。🔴 标记最新 session，有新消息时显示红色未读 badge。
 
 ### 消息过滤
 侧边栏支持按角色过滤：👤 User / 🤖 Assistant / 🔧 Tools / 💭 Thinking

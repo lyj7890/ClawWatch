@@ -1,5 +1,19 @@
 # Changelog
 
+## v1.0.11 (2026-06-03)
+
+### New Features
+- **feat: Sidebar 两级 agent → session 结构**
+  - Session tab 从 header 移入 sidebar，按 agent 主机名分组展示
+  - 每个 agent 分组可折叠/展开，默认折叠
+  - Session 列表无数量限制，可无限滚动（原来最多只显示 5 个）
+  - 时间显示改为相对时间（just now / 5m ago / 2h ago / yesterday）
+- **feat: Agent 级未读汇总**
+  - Agent 分组行右侧显示该 agent 下所有 session 的未读消息总数（红色 badge）
+  - 无未读时显示灰色 session 总数
+- **feat: Header 精简**
+  - 去掉 session tab 行，header 只保留工具按钮，更简洁
+
 ## v1.0.10 (2026-06-01)
 
 ### Bug Fixes
