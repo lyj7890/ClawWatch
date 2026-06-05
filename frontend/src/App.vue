@@ -50,8 +50,34 @@
       <!-- Sidebar：两级 agent → sessions -->
       <aside class="w-64 bg-white border-r border-gray-200 flex flex-col shadow-sm">
 
+        <!-- 最近访问区块 -->
+        <div v-if="recentSessions.length > 0" class="flex-shrink-0 border-b border-gray-200">
+          <div class="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wide flex items-center gap-1.5">
+            <span>🕐</span><span>最近访问</span>
+          </div>
+          <button
+            v-for="item in recentSessions"
+            :key="'recent-' + item.sessionId"
+            @click="switchSession(item.sessionId, item.agent)"
+            class="w-full text-left px-3 py-2 border-b border-gray-50 transition border-l-2"
+            :class="currentSessionId === item.sessionId ? 'bg-blue-50 border-l-blue-500' : 'border-l-transparent hover:bg-gray-50'"
+          >
+            <div class="flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full flex-shrink-0" :style="{ background: getAgentColor(item.agent) }"></span>
+              <code class="text-xs font-mono flex-1 truncate" :class="currentSessionId === item.sessionId ? 'text-blue-700 font-semibold' : 'text-gray-700'">{{ item.sessionId.substring(0, 8) }}</code>
+              <span class="text-xs text-gray-400 flex-shrink-0">{{ relativeTime(item.mtime) }}</span>
+              <UnreadBadge :info="sessionMessageCounts[item.sessionId]" />
+            </div>
+            <div class="text-xs text-gray-400 mt-0.5 pl-4 truncate">{{ item.agent }}</div>
+          </button>
+        </div>
+
         <!-- Sessions 列表（可滚动，占满剩余空间） -->
         <div class="flex-1 overflow-y-auto">
+          <!-- 全部 Session 标题 -->
+          <div class="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wide flex items-center justify-between border-b border-gray-100">
+            <div class="flex items-center gap-1.5"><span>📂</span><span>全部 Session</span></div>
+          </div>
           <div
             v-for="agentGroup in groupedSessions"
             :key="agentGroup.agent"
@@ -100,17 +126,7 @@
                   <div class="text-xs text-gray-400 mt-0.5">{{ formatTime(session.mtime) }}</div>
                 </div>
                 <!-- 未读标识 -->
-                <span
-                  v-if="sessionMessageCounts[session.id]?.hasUnread"
-                  class="w-2 h-2 bg-red-500 rounded-full animate-pulse flex-shrink-0"
-                  title="有新消息"
-                ></span>
-                <span
-                  v-if="sessionMessageCounts[session.id]?.hasUnread"
-                  class="text-xs bg-red-100 text-red-600 border border-red-200 rounded-full px-1.5 font-semibold flex-shrink-0"
-                >
-                  {{ sessionMessageCounts[session.id]?.newCount || '' }}
-                </span>
+                <UnreadBadge :info="sessionMessageCounts[session.id]" />
               </button>
             </div>
           </div>
@@ -192,6 +208,7 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted, reactive } from 'vue'
+import UnreadBadge from './components/UnreadBadge.vue'
 import MessageCard from './components/MessageCard.vue'
 
 const API_BASE = ''
@@ -225,12 +242,45 @@ const filters = ref({
 
 let pollInterval = null
 
+// ── 最近访问：跨 agent 取最近活跃的 session（top 5）──
+const agentColorPalette = ['#3b82f6','#10b981','#8b5cf6','#f59e0b','#ef4444','#06b6d4','#ec4899','#84cc16']
+const agentColorCache = {}
+let agentColorCounter = 0
+function getAgentColor(agent) {
+  if (!agentColorCache[agent]) {
+    agentColorCache[agent] = agentColorPalette[agentColorCounter % agentColorPalette.length]
+    agentColorCounter++
+  }
+  return agentColorCache[agent]
+}
+function relativeTime(mtime) {
+  if (!mtime) return ''
+  const ts = typeof mtime === 'string' ? new Date(mtime).getTime() : mtime
+  if (isNaN(ts)) return ''
+  const diff = Date.now() - ts
+  if (diff < 60000) return '刚刚'
+  if (diff < 3600000) return Math.floor(diff / 60000) + ' 分钟前'
+  if (diff < 86400000) return Math.floor(diff / 3600000) + ' 小时前'
+  return Math.floor(diff / 86400000) + ' 天前'
+}
+const recentSessions = computed(() => {
+  const items = []
+  Object.entries(allSessions.value).forEach(([agent, sessions]) => {
+    sessions.forEach(s => {
+      items.push({ agent, sessionId: s.id, mtime: s.mtime })
+    })
+  })
+  return items
+    .sort((a, b) => new Date(b.mtime).getTime() - new Date(a.mtime).getTime())
+    .slice(0, 5)
+})
+
 // ── 按 agent 分组的 sessions（sidebar 数据源） ──
 const groupedSessions = computed(() => {
   return agents.value.map(agent => {
-    const agentSessions = (allSessions.value[agent] || []).slice().sort((a, b) => b.mtime - a.mtime)
+    const agentSessions = (allSessions.value[agent] || []).slice().sort((a, b) => new Date(b.mtime).getTime() - new Date(a.mtime).getTime())
     // 简单判断在线：最新 session mtime 在 10 分钟内认为 online
-    const latestMtime = agentSessions[0]?.mtime || 0
+    const latestMtime = agentSessions[0]?.mtime ? new Date(agentSessions[0].mtime).getTime() : 0
     const online = Date.now() - latestMtime < 10 * 60 * 1000
     // 汇总该 agent 下所有 session 的未读数
     const totalUnread = agentSessions.reduce((sum, s) => {
