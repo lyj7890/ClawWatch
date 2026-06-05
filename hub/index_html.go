@@ -94,6 +94,25 @@ btn { display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-rad
 
     <!-- Sidebar -->
     <aside style="width:220px;background:#fff;border-right:1px solid #e2e8f0;display:flex;flex-direction:column;flex-shrink:0;overflow:hidden">
+
+      <!-- 最近访问 -->
+      <div v-if="recentAgents.length > 0" style="flex-shrink:0;border-bottom:1px solid #e2e8f0">
+        <div style="padding:8px 14px 4px;font-size:11px;color:#94a3b8;text-transform:uppercase;letter-spacing:.8px;font-weight:600;display:flex;align-items:center;gap:5px">
+          <span>🕐</span><span>最近访问</span>
+        </div>
+        <div v-for="a in recentAgents" :key="'r-'+a.id" @click="selectAgent(a.id)" class="agent-item"
+          :style="selectedAgent === a.id ? 'background:#eff6ff;border-left:3px solid #3b82f6;' : 'border-left:3px solid transparent;'"
+          style="padding:7px 12px;cursor:pointer;transition:background .15s">
+          <div style="display:flex;align-items:center;gap:7px">
+            <div :style="{width:'8px',height:'8px',borderRadius:'50%',background:agentColor(a.id),flexShrink:0}"></div>
+            <span :style="selectedAgent === a.id ? 'color:#1d4ed8;font-weight:600' : 'color:#374151'"
+              style="font-size:12px;font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:140px" :title="a.id">{{ shortId(a.id) }}</span>
+            <span style="margin-left:auto;font-size:11px;color:#94a3b8;background:#f1f5f9;padding:1px 5px;border-radius:8px;flex-shrink:0">{{ a.count }}</span>
+          </div>
+          <div style="font-size:11px;color:#94a3b8;margin-top:2px;padding-left:15px">{{ relativeTime(a.lastTime) }}</div>
+        </div>
+      </div>
+
       <div style="padding:10px 14px;font-size:11px;color:#94a3b8;text-transform:uppercase;letter-spacing:.8px;font-weight:600;border-bottom:1px solid #f1f5f9">
         Agents ({{ agentCount }})
       </div>
@@ -314,6 +333,37 @@ createApp({
       return (messagesByAgent.value[agentId] || []).length;
     }
 
+    // 最近访问：按最后一条消息时间排序，取 top 5
+    const agentColors = ['#3b82f6','#10b981','#8b5cf6','#f59e0b','#ef4444','#06b6d4','#ec4899','#84cc16'];
+    const agentColorMap = {};
+    let colorIdx = 0;
+    function agentColor(agentId) {
+      if (!agentColorMap[agentId]) {
+        agentColorMap[agentId] = agentColors[colorIdx % agentColors.length];
+        colorIdx++;
+      }
+      return agentColorMap[agentId];
+    }
+    function lastMsgTime(agentId) {
+      const msgs = messagesByAgent.value[agentId] || [];
+      if (!msgs.length) return 0;
+      return new Date(msgs[msgs.length - 1].timestamp || 0).getTime();
+    }
+    function relativeTime(ts) {
+      const diff = Date.now() - ts;
+      if (diff < 60000) return '刚刚';
+      if (diff < 3600000) return Math.floor(diff / 60000) + ' 分钟前';
+      if (diff < 86400000) return Math.floor(diff / 3600000) + ' 小时前';
+      return Math.floor(diff / 86400000) + ' 天前';
+    }
+    const recentAgents = computed(() => {
+      return Object.keys(agents.value)
+        .map(id => ({ id, lastTime: lastMsgTime(id), count: msgCountFor(id) }))
+        .filter(a => a.count > 0)
+        .sort((a, b) => b.lastTime - a.lastTime)
+        .slice(0, 5);
+    });
+
     const displayMessages = computed(() => {
       if (selectedAgent.value === null) return allMessages.value;
       return messagesByAgent.value[selectedAgent.value] || [];
@@ -470,7 +520,8 @@ createApp({
       selectedAgent, agents, allMessages, agentCount, forceExpandThinking, forceExpandArgs,
       allThinkingExpanded, allArgsExpanded, messageArea, bottomAnchor,
       filteredMessages, msgCountFor, shortId, selectAgent, reconnect, clearMessages,
-      toggleAllThinking, toggleAllArgs
+      toggleAllThinking, toggleAllArgs,
+      recentAgents, agentColor, relativeTime
     };
   }
 }).mount('#app');

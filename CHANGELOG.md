@@ -1,8 +1,11 @@
 # Changelog
 
-## v1.0.11 (2026-06-03)
+## v1.0.12 (2026-06-05)
 
 ### New Features
+- **最近访问栏**：Sidebar 顶部新增「🕐 最近访问」区块，显示最近有消息活动的 Agent（按最后消息时间排序，最多 5 个），支持彩色圆点区分、相对时间显示，点击直接切换
+
+
 - **feat: Sidebar 两级 agent → session 结构**
   - Session tab 从 header 移入 sidebar，按 agent 主机名分组展示
   - 每个 agent 分组可折叠/展开，默认折叠
