@@ -231,7 +231,10 @@ const contextExpanded = ref(false)
 const META_TYPES = ['session', 'model_change', 'thinking_level_change', 'custom']
 const isMetaEvent = computed(() => {
   const t = props.message.type
-  return t && t !== 'message' && t !== 'custom_message' && META_TYPES.includes(t)
+  if (!t || t === 'message') return false
+  // custom_message 只有 openclaw.runtime-context 走 SystemContext 块，其余走 meta
+  if (t === 'custom_message') return props.message.customType !== 'openclaw.runtime-context'
+  return META_TYPES.includes(t)
 })
 
 const isSystemContext = computed(() => {
@@ -243,7 +246,8 @@ const metaIcon = computed(() => {
     session: '📦',
     model_change: '🧠',
     thinking_level_change: '💡',
-    custom: 'ℹ️'
+    custom: 'ℹ️',
+    custom_message: '🔔'
   }
   return icons[props.message.type] || '•'
 })
@@ -254,6 +258,7 @@ const metaLabel = computed(() => {
   if (t === 'model_change') return `Model → ${props.message.provider}/${props.message.modelId}`
   if (t === 'thinking_level_change') return `Thinking → ${props.message.thinkingLevel}`
   if (t === 'custom') return `${props.message.customType || 'custom'}`
+  if (t === 'custom_message') return `${props.message.customType || 'custom_message'}`
   return t
 })
 
@@ -262,14 +267,21 @@ const contextPreview = computed(() => {
   return c.replace(/\n/g, ' ').slice(0, 120) + (c.length > 120 ? '...' : '')
 })
 
-const role = computed(() => props.message.message?.role || 'unknown')
+const VALID_ROLES = ['user', 'assistant', 'tool', 'toolResult']
+const role = computed(() => {
+  const r = props.message.message?.role
+  return (r && VALID_ROLES.includes(r)) ? r : 'unknown'
+})
 const content = computed(() => {
-  const raw = props.message.message?.content || []
+  const raw = props.message.message?.content
+  // normalize string content to array
+  if (typeof raw === 'string') return [{ type: 'text', text: raw }]
+  const arr = raw || []
   // Filter out the generic failure placeholder when we have an actual errorMessage
   if (props.message.message?.errorMessage) {
-    return raw.filter(item => !(item.type === 'text' && item.text === '[assistant turn failed before producing content]'))
+    return arr.filter(item => !(item.type === 'text' && item.text === '[assistant turn failed before producing content]'))
   }
-  return raw
+  return arr
 })
 const errorMessage = computed(() => props.message.message?.errorMessage || null)
 const errorProvider = computed(() => props.message.message?.provider || null)

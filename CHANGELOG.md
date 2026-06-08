@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.0.13 (2026-06-08)
+
+### Bug Fixes
+- **Unknown 消息修复**：`custom_message`（如 `openclaw.sessions_yield`）不再显示为 ❓ Unknown，改为渲染成小横线分隔符（🔔 + customType）
+- **content 字符串兼容**：`MessageCard` 的 `content()` 增加防御处理，字符串格式 content 自动转为数组，避免空白渲染
+- **role 白名单过滤**：`isMetaEvent` 逻辑收紧，所有非 `openclaw.runtime-context` 的 `custom_message` 统一走 meta 渲染路径
+
 ## v1.0.12 (2026-06-05)
 
 ### New Features

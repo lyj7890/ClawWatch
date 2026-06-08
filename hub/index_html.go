@@ -190,7 +190,12 @@ const MessageCard = {
   },
   computed: {
     role() { return this.message.message?.role || 'unknown' },
-    content() { return this.message.message?.content || [] },
+    content() {
+      const c = this.message.message?.content;
+      if (!c) return [];
+      if (typeof c === 'string') return [{ type: 'text', text: c }];
+      return c;
+    },
     roleIcon() { return {user:'👤',assistant:'🤖',tool:'⚙️',toolResult:'📤'}[this.role] || '❓' },
     roleText() { return {user:'User',assistant:'Assistant',tool:'Tool',toolResult:'Tool Result'}[this.role] || this.role },
     colors() {
@@ -433,6 +438,8 @@ createApp({
         let parsed;
         try { parsed = typeof line === 'string' ? JSON.parse(line) : line; } catch { return; }
         if (!parsed || !parsed.message) return;
+        const role = parsed.message?.role;
+        if (!role || !['user','assistant','tool','toolResult'].includes(role)) return;
         const msgObj = {
           _id: ++msgIdCounter,
           agentId,
