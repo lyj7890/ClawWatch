@@ -10,16 +10,16 @@ import (
 )
 
 var upgrader = websocket.Upgrader{
-	CheckOrigin: func(r *http.Request) bool { return true },
+	CheckOrigin:     func(r *http.Request) bool { return true },
 	ReadBufferSize:  4096,
 	WriteBufferSize: 4096,
 }
 
 const (
 	writeWait  = 10 * time.Second
-	pongWait   = 60 * time.Second
-	pingPeriod = 50 * time.Second
-	maxMsgSize = 1 << 20 // 1MB
+	pongWait   = 180 * time.Second
+	pingPeriod = 45 * time.Second
+	maxMsgSize = 4 << 20 // 4MB, supports explicitly unredacted trajectory events
 )
 
 // handleAgentWS 处理 agent 的 WebSocket 连接
@@ -51,6 +51,27 @@ func handleAgentWS(hub *Hub, cfg *Config) http.HandlerFunc {
 		}
 		hub.registerAgent <- agent
 
+		// 为该 agentId 生成（或复用）专属 console token，并通过 ack 告知 agent
+		if hub.tokens != nil {
+			if token, err := hub.tokens.GetOrCreate(agentID); err != nil {
+				log.Printf("[agent] %s: failed to provision console token: %v", agentID, err)
+			} else {
+				ack := map[string]interface{}{
+					"type":         "agent_hello_ack",
+					"agentId":      agentID,
+					"consoleToken": token,
+					"timestamp":    time.Now().UnixMilli(),
+				}
+				if data, err := json.Marshal(ack); err == nil {
+					select {
+					case agent.Send <- data:
+					default:
+						log.Printf("[agent] %s: failed to enqueue agent_hello_ack", agentID)
+					}
+				}
+			}
+		}
+
 		// write pump
 		go agentWritePump(conn, agent)
 
@@ -66,7 +87,9 @@ func agentReadPump(conn *websocket.Conn, hub *Hub, agent *AgentConn) {
 	conn.SetReadLimit(maxMsgSize)
 	conn.SetReadDeadline(time.Now().Add(pongWait))
 	conn.SetPongHandler(func(string) error {
+		hub.mu.Lock()
 		agent.LastSeen = time.Now()
+		hub.mu.Unlock()
 		conn.SetReadDeadline(time.Now().Add(pongWait))
 		return nil
 	})
@@ -79,10 +102,21 @@ func agentReadPump(conn *websocket.Conn, hub *Hub, agent *AgentConn) {
 			}
 			return
 		}
+		hub.mu.Lock()
 		agent.LastSeen = time.Now()
+		updateAgentMetadata(raw, agent)
+		hub.mu.Unlock()
 
+		// 检查是否是 session_history 或 session_history_error 响应
+		if handleSessionHistoryResponse(hub, raw) {
+			// 内部通信，不广播给 console
+			continue
+		}
+
+		hub.mu.Lock()
+		enriched := injectAgentMetadata(raw, agent)
+		hub.mu.Unlock()
 		// 给 raw 消息注入 agentId 字段后广播给 consoles
-		enriched := injectAgentID(raw, agent.ID)
 		hub.broadcast <- &broadcastMsg{agentID: agent.ID, data: enriched}
 	}
 }
@@ -114,20 +148,56 @@ func agentWritePump(conn *websocket.Conn, agent *AgentConn) {
 	}
 }
 
-// injectAgentID 向 JSON 消息中注入 agentId 字段
-func injectAgentID(raw []byte, agentID string) []byte {
+func updateAgentMetadata(raw []byte, agent *AgentConn) {
+	var msg struct {
+		Type            string `json:"type"`
+		ProtocolVersion int    `json:"protocolVersion"`
+		AgentVersion    string `json:"agentVersion"`
+		Host            struct {
+			Hostname string   `json:"hostname"`
+			IPs      []string `json:"ips"`
+			OS       string   `json:"os"`
+			Arch     string   `json:"arch"`
+		} `json:"host"`
+		Agents   []OpenClawAgentInfo `json:"agents"`
+		Sessions []SessionInfo       `json:"sessions"`
+	}
+	if json.Unmarshal(raw, &msg) != nil {
+		return
+	}
+
+	if msg.Type == "agent_hello" {
+		agent.Hostname = msg.Host.Hostname
+		agent.HostIPs = msg.Host.IPs
+		agent.OS = msg.Host.OS
+		agent.Arch = msg.Host.Arch
+		agent.AgentVersion = msg.AgentVersion
+		agent.ProtocolVersion = msg.ProtocolVersion
+		agent.OpenClawAgents = msg.Agents
+	} else if msg.Type == "session_list" {
+		// 更新 sessions 列表
+		agent.Sessions = msg.Sessions
+	}
+}
+
+// injectAgentMetadata adds authoritative connection identity while preserving old clients.
+func injectAgentMetadata(raw []byte, agent *AgentConn) []byte {
 	var m map[string]interface{}
 	if err := json.Unmarshal(raw, &m); err != nil {
 		// 非 JSON，包装一层
-		return buildRawWrapper(agentID, raw)
+		return buildRawWrapper(agent.ID, raw)
 	}
-	m["agentId"] = agentID
+	m["agentId"] = agent.ID
+	if agent.Hostname != "" {
+		m["hostname"] = agent.Hostname
+		m["hostIPs"] = agent.HostIPs
+	}
 	if _, ok := m["timestamp"]; !ok {
 		m["timestamp"] = time.Now().UnixMilli()
 	}
 	out, err := json.Marshal(m)
 	if err != nil {
-		return buildRawWrapper(agentID, raw)
+		return buildRawWrapper(agent.ID, raw)
 	}
 	return out
 }
@@ -141,4 +211,48 @@ func buildRawWrapper(agentID string, raw []byte) []byte {
 	}
 	out, _ := json.Marshal(m)
 	return out
+}
+
+// handleSessionHistoryResponse 处理 session_history 和 session_history_error 响应
+// 返回 true 表示该消息已处理，不应广播给 console
+func handleSessionHistoryResponse(hub *Hub, raw []byte) bool {
+	var msg struct {
+		Type      string          `json:"type"`
+		RequestID string          `json:"requestId"`
+		Data      json.RawMessage `json:"data"`
+		Error     string          `json:"error"`
+	}
+	if err := json.Unmarshal(raw, &msg); err != nil {
+		return false
+	}
+
+	if msg.Type != "session_history" && msg.Type != "session_history_error" {
+		return false
+	}
+
+	if msg.RequestID == "" {
+		log.Printf("[agent] received %s without requestId", msg.Type)
+		return true
+	}
+
+	hub.pendingMu.Lock()
+	respChan, exists := hub.pendingRequests[msg.RequestID]
+	if exists {
+		delete(hub.pendingRequests, msg.RequestID)
+	}
+	hub.pendingMu.Unlock()
+
+	if !exists {
+		log.Printf("[agent] received %s for unknown requestId: %s", msg.Type, msg.RequestID)
+		return true
+	}
+
+	// 发送响应到等待的 HTTP 请求
+	select {
+	case respChan <- raw:
+	default:
+		log.Printf("[agent] failed to send %s response for requestId: %s", msg.Type, msg.RequestID)
+	}
+
+	return true
 }

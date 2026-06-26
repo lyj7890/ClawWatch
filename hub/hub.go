@@ -6,11 +6,33 @@ import (
 	"time"
 )
 
+// SessionInfo 表示一个 OpenClaw session
+type SessionInfo struct {
+	AgentID   string `json:"agentId"`
+	SessionID string `json:"sessionId"`
+	MTime     int64  `json:"mtime"`
+	Size      int64  `json:"size"`
+}
+
 // AgentConn 已注册的 agent 连接
 type AgentConn struct {
-	ID       string
-	Send     chan []byte
-	LastSeen time.Time
+	ID              string
+	Hostname        string
+	HostIPs         []string
+	OS              string
+	Arch            string
+	AgentVersion    string
+	ProtocolVersion int
+	OpenClawAgents  []OpenClawAgentInfo
+	Sessions        []SessionInfo
+	Send            chan []byte
+	LastSeen        time.Time
+}
+
+type OpenClawAgentInfo struct {
+	ID           string `json:"id"`
+	SessionCount int    `json:"sessionCount"`
+	LastActivity int64  `json:"lastActivity,omitempty"`
 }
 
 // ConsoleConn 已订阅的 console 连接
@@ -18,6 +40,20 @@ type ConsoleConn struct {
 	ID        string // 随机 id
 	Subscribe string // 订阅的 agentId，"*" 表示全部
 	Send      chan []byte
+
+	// AllowedAgentID 是该 console 凭 token 解析出的唯一可见 agentId。
+	// 为空且 Admin=true 时表示可见全部。
+	AllowedAgentID string
+	// Admin 表示该 console 使用了全局 ConsoleToken（或未配置 token 的开放模式），可见全部 agent。
+	Admin bool
+}
+
+// canSee 判断该 console 是否有权查看指定 agentId 的数据。
+func (c *ConsoleConn) canSee(agentID string) bool {
+	if c.Admin {
+		return true
+	}
+	return c.AllowedAgentID != "" && c.AllowedAgentID == agentID
 }
 
 type broadcastMsg struct {
@@ -38,9 +74,16 @@ type Hub struct {
 	unregisterConsole chan *ConsoleConn
 
 	broadcast chan *broadcastMsg
+	store     *MessageStore
+	metrics   *MessageStore
+	tokens    *TokenStore
+
+	// pendingRequests 追踪等待响应的请求
+	pendingMu       sync.Mutex
+	pendingRequests map[string]chan []byte
 }
 
-func NewHub() *Hub {
+func NewHub(store, metrics *MessageStore, tokens *TokenStore) *Hub {
 	return &Hub{
 		agents:            make(map[string]*AgentConn),
 		consoles:          make(map[string]*ConsoleConn),
@@ -49,6 +92,10 @@ func NewHub() *Hub {
 		registerConsole:   make(chan *ConsoleConn, 16),
 		unregisterConsole: make(chan *ConsoleConn, 16),
 		broadcast:         make(chan *broadcastMsg, 256),
+		store:             store,
+		metrics:           metrics,
+		tokens:            tokens,
+		pendingRequests:   make(map[string]chan []byte),
 	}
 }
 
@@ -68,7 +115,7 @@ func (h *Hub) Run() {
 
 		case agent := <-h.unregisterAgent:
 			h.mu.Lock()
-			if _, ok := h.agents[agent.ID]; ok {
+			if current, ok := h.agents[agent.ID]; ok && current == agent {
 				delete(h.agents, agent.ID)
 				close(agent.Send)
 			}
@@ -94,6 +141,16 @@ func (h *Hub) Run() {
 			log.Printf("[hub] console disconnected: %s", console.ID)
 
 		case msg := <-h.broadcast:
+			if h.store != nil {
+				if err := h.store.Append(msg.agentID, msg.data); err != nil {
+					log.Printf("[hub] persist message: %v", err)
+				}
+			}
+			if h.metrics != nil {
+				if err := h.metrics.Append(msg.agentID, msg.data); err != nil {
+					log.Printf("[hub] persist metrics: %v", err)
+				}
+			}
 			h.fanout(msg)
 
 		case <-ticker.C:
@@ -106,6 +163,9 @@ func (h *Hub) fanout(msg *broadcastMsg) {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	for _, c := range h.consoles {
+		if !c.canSee(msg.agentID) {
+			continue
+		}
 		if c.Subscribe == "*" || c.Subscribe == msg.agentID {
 			select {
 			case c.Send <- msg.data:
@@ -117,10 +177,17 @@ func (h *Hub) fanout(msg *broadcastMsg) {
 }
 
 func (h *Hub) notifyConsolesStatus(agentID string, online bool) {
-	data := buildAgentStatusJSON(agentID, online)
 	h.mu.RLock()
 	defer h.mu.RUnlock()
+	agent := h.agents[agentID]
+	if agent == nil {
+		agent = &AgentConn{ID: agentID}
+	}
+	data := buildAgentStatusJSON(agent, online)
 	for _, c := range h.consoles {
+		if !c.canSee(agentID) {
+			continue
+		}
 		if c.Subscribe == "*" || c.Subscribe == agentID {
 			select {
 			case c.Send <- data:
@@ -132,15 +199,18 @@ func (h *Hub) notifyConsolesStatus(agentID string, online bool) {
 
 func (h *Hub) sendCurrentAgentsStatus(c *ConsoleConn) {
 	h.mu.RLock()
-	ids := make([]string, 0, len(h.agents))
-	for id := range h.agents {
-		ids = append(ids, id)
+	agents := make([]*AgentConn, 0, len(h.agents))
+	for _, agent := range h.agents {
+		agents = append(agents, agent)
 	}
 	h.mu.RUnlock()
 
-	for _, id := range ids {
-		if c.Subscribe == "*" || c.Subscribe == id {
-			data := buildAgentStatusJSON(id, true)
+	for _, agent := range agents {
+		if !c.canSee(agent.ID) {
+			continue
+		}
+		if c.Subscribe == "*" || c.Subscribe == agent.ID {
+			data := buildAgentStatusJSON(agent, true)
 			select {
 			case c.Send <- data:
 			default:

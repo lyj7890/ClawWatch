@@ -123,7 +123,7 @@ btn { display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-rad
   <!-- Connect Panel -->
   <div v-show="showConnectPanel" style="background:#f8fafc;border-bottom:1px solid #e2e8f0;padding:10px 20px;display:flex;align-items:center;gap:10px;flex-shrink:0">
     <label style="font-size:12px;color:#64748b;white-space:nowrap">Token:</label>
-    <input v-model="tokenInput" type="password" placeholder="Console Token (空=跳过)" style="width:200px;background:#fff;border:1px solid #e2e8f0;border-radius:6px;padding:5px 10px;font-size:13px;color:#1e293b;outline:none">
+    <input v-model="tokenInput" type="password" placeholder="主机 Token (留空=开放模式)" title="输入该主机的 Console Token（一机一 token），或全局 admin token 查看全部" style="width:240px;background:#fff;border:1px solid #e2e8f0;border-radius:6px;padding:5px 10px;font-size:13px;color:#1e293b;outline:none">
     <label style="font-size:12px;color:#64748b;white-space:nowrap">Subscribe:</label>
     <input v-model="subscribeInput" type="text" placeholder="* = all agents" style="width:160px;background:#fff;border:1px solid #e2e8f0;border-radius:6px;padding:5px 10px;font-size:13px;color:#1e293b;outline:none">
     <button @click="reconnect" style="padding:5px 16px;background:#2563eb;color:#fff;border:none;border-radius:6px;font-size:13px;cursor:pointer;font-weight:500">
@@ -192,7 +192,7 @@ btn { display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-rad
       </div>
     </aside>
 
-    <div style="flex:1;display:flex;flex-direction:column;min-width:0">
+    <div style="flex:1;display:flex;flex-direction:column;min-width:0;position:relative">
     <div class="content-toolbar">
       <div style="min-width:0">
         <div style="font-size:13px;font-weight:700;color:#0f172a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ selectedViewTitle }}</div>
@@ -228,8 +228,8 @@ btn { display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-rad
         ></message-card>
         <div ref="bottomAnchor" style="height:1px"></div>
       </div>
-      <button v-if="newMessageCount > 0" @click="scrollToBottom(true)" style="position:absolute;bottom:12px;left:50%;transform:translateX(-50%);background:#2563eb;color:#fff;border:none;padding:8px 18px;border-radius:999px;font-size:13px;font-weight:600;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.15);z-index:10;display:inline-flex;align-items:center;gap:6px;width:auto;">↓ {{ newMessageCount }} 条新消息</button>
     </main>
+    <button v-if="newMessageCount > 0" @click="scrollToBottom(true)" style="position:absolute;bottom:12px;left:50%;transform:translateX(-50%);background:#2563eb;color:#fff;border:none;padding:8px 18px;border-radius:999px;font-size:13px;font-weight:600;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.15);z-index:10;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;">↓ {{ newMessageCount }} 条新消息</button>
     </div>
   </div>
 </div>
@@ -427,7 +427,7 @@ createApp({
     const connected = ref(false);
     const reconnecting = ref(false);
     const showConnectPanel = ref(false);
-    const tokenInput = ref('');
+    const tokenInput = ref((function(){ try { return localStorage.getItem('clawwatch_token') || ''; } catch { return ''; } })());
     const subscribeInput = ref('*');
     const searchQuery = ref('');
     const selectedAgent = ref(null);
@@ -842,7 +842,7 @@ createApp({
       const openclawAgentId = agents.value[agentId]?.openclawAgentId || '';
       if (!hostId || !openclawAgentId || !sessionId) return;
       try {
-        const res = await fetch('/api/session-history?agentId=' + encodeURIComponent(hostId) + '&openclawAgentId=' + encodeURIComponent(openclawAgentId) + '&sessionId=' + encodeURIComponent(sessionId));
+        const res = await fetch('/api/session-history?agentId=' + encodeURIComponent(hostId) + '&openclawAgentId=' + encodeURIComponent(openclawAgentId) + '&sessionId=' + encodeURIComponent(sessionId) + apiTokenSuffix());
         if (!res.ok) return;
         const text = await res.text();
         if (!text) return;
@@ -1089,6 +1089,7 @@ createApp({
       connected.value = false;
       reconnecting.value = !resetBackoff;
       const token = tokenInput.value.trim();
+      try { localStorage.setItem('clawwatch_token', token); } catch {}
       const sub = subscribeInput.value.trim() || '*';
       const proto = location.protocol === 'https:' ? 'wss' : 'ws';
       let url = proto + '://' + location.host + '/ws/console?subscribe=' + encodeURIComponent(sub);
@@ -1127,9 +1128,15 @@ createApp({
       Object.keys(agents.value).forEach(id => { messagesByAgent.value[id] = []; });
     }
 
+    // apiTokenSuffix 返回当前 token 的查询串后缀（带 & 前缀），用于 REST API 鉴权
+    function apiTokenSuffix() {
+      const token = tokenInput.value.trim();
+      return token ? '&token=' + encodeURIComponent(token) : '';
+    }
+
     async function fetchHistory(agentId) {
       try {
-        const res = await fetch('/api/history?agentId=' + encodeURIComponent(agentId || '*') + '&limit=1000');
+        const res = await fetch('/api/history?agentId=' + encodeURIComponent(agentId || '*') + '&limit=1000' + apiTokenSuffix());
         const data = await res.json();
         if (Array.isArray(data.messages)) data.messages.forEach(msg => handleMsg(JSON.stringify(msg), true));
       } catch {}
@@ -1138,7 +1145,7 @@ createApp({
     async function fetchTrajectory(hostId) {
       if (!hostId) return;
       try {
-        const res = await fetch('/api/trajectory?agentId=' + encodeURIComponent(hostId) + '&limit=2000');
+        const res = await fetch('/api/trajectory?agentId=' + encodeURIComponent(hostId) + '&limit=2000' + apiTokenSuffix());
         const data = await res.json();
         if (Array.isArray(data.messages)) {
           trajectoryByHost.value = { ...trajectoryByHost.value, [hostId]: data.messages };
@@ -1148,7 +1155,7 @@ createApp({
 
     async function fetchAgents() {
       try {
-        const res = await fetch('/api/agents');
+        const res = await fetch('/api/agents' + (apiTokenSuffix() ? '?' + apiTokenSuffix().slice(1) : ''));
         const data = await res.json();
         if (Array.isArray(data.agents)) data.agents.forEach(a => {
           ensureAgent(a.id, true, sourceMeta({...a, agentId:a.id, hostIPs:a.hostIPs || []}));

@@ -12,15 +12,43 @@ import (
 // ws://hub:4848/ws/console?token=xxx&subscribe=my-mac  (subscribe="*" 订阅全部)
 func handleConsoleWS(hub *Hub, cfg *Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// token 校验
-		if cfg.ConsoleToken != "" && r.URL.Query().Get("token") != cfg.ConsoleToken {
-			http.Error(w, "unauthorized", http.StatusUnauthorized)
-			return
+		token := r.URL.Query().Get("token")
+
+		// 解析 token 以确定该 console 的可见范围
+		admin := false
+		allowedAgentID := ""
+		switch {
+		case cfg.ConsoleToken != "" && token == cfg.ConsoleToken:
+			// 全局 ConsoleToken = admin，可见全部 agent（向后兼容 + 管理用途）
+			admin = true
+		case hub.tokens != nil:
+			if agentID, ok := hub.tokens.AgentIDForToken(token); ok {
+				allowedAgentID = agentID
+			}
+		}
+
+		// 权限校验：
+		// - 若配置了全局 ConsoleToken，则必须是 admin 或匹配某个 per-agent token
+		// - 若未配置全局 ConsoleToken，从宝未带 token 也允许（开放模式 = admin）
+		if cfg.ConsoleToken != "" {
+			if !admin && allowedAgentID == "" {
+				http.Error(w, "unauthorized", http.StatusUnauthorized)
+				return
+			}
+		} else {
+			if allowedAgentID == "" {
+				// 未配置全局 token 且 token 不匹配任何 agent：视为 admin（开放模式）
+				admin = true
+			}
 		}
 
 		subscribe := r.URL.Query().Get("subscribe")
 		if subscribe == "" {
 			subscribe = "*"
+		}
+		// 非 admin 的 console 强制锁定到其 token 对应的 agentId
+		if !admin {
+			subscribe = allowedAgentID
 		}
 
 		conn, err := upgrader.Upgrade(w, r, nil)
@@ -30,9 +58,11 @@ func handleConsoleWS(hub *Hub, cfg *Config) http.HandlerFunc {
 		}
 
 		console := &ConsoleConn{
-			ID:        generateID("console"),
-			Subscribe: subscribe,
-			Send:      make(chan []byte, 512),
+			ID:             generateID("console"),
+			Subscribe:      subscribe,
+			Send:           make(chan []byte, 512),
+			AllowedAgentID: allowedAgentID,
+			Admin:          admin,
 		}
 		hub.registerConsole <- console
 
