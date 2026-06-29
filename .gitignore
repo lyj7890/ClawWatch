@@ -9,6 +9,10 @@ node_modules/
 
 # 前端构建产物（npm 发布时通过 files 字段包含，git 中不跟踪）
 frontend/dist/
+dist/
+agent/clawwatch-agent
+.build-cache/
+macos/ClawPet/.build/
 
 # 临时文件
 *.tmp
@@ -25,3 +29,6 @@ frontend/dist/
 *~
 hub/clawwatch-hub
 hub/clawwatch-hub-linux-*
+hub/clawwatch-agent
+hub/clawwatch-agent-linux-*
+hub/data/

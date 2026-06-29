@@ -33,8 +33,8 @@ const features: Feature[] = [
   {
     icon: ShieldCheckIcon,
     title: "Token 鉴权",
-    body: "每个 Agent 和查看者都有独立的 Token 权限。支持轮换、撤销和审计，无需重新部署。",
-    meta: "按 Agent 隔离",
+    body: "每台主机自动分配独立 Token，数据按主机隔离。管理员 Token 可查看全局，未认证访问直接拒绝。",
+    meta: "按主机隔离",
     className: "md:col-span-1",
   },
   {
@@ -54,7 +54,7 @@ export default function Features() {
           核心能力
         </p>
         <h2 className="mt-3 max-w-xl text-3xl font-semibold tracking-tight text-white sm:text-4xl">
-          为生产瘕的 Agent 团队打造
+          为生产级的 Agent 团队打造
         </h2>
       </Reveal>
 

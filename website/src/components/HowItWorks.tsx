@@ -15,22 +15,22 @@ const steps: Step[] = [
     icon: DownloadSimpleIcon,
     n: "01",
     title: "安装 Agent",
-    body: "轻量级 Agent 二进制，零配置，一个命令启动。",
-    code: "./clawwatch-agent --hub wss://hub.your.domain",
+    body: "下载预编译二进制，或从源码编译。支持 Linux / macOS / arm64。",
+    code: "curl -fsSL https://github.com/lyj7890/ClawWatch/releases/latest/download/clawwatch-agent-$(uname -s)-$(uname -m) -o clawwatch-agent && chmod +x clawwatch-agent",
   },
   {
     icon: PlugsConnectedIcon,
     n: "02",
     title: "连接 Hub",
-    body: "指定 Hub 地址和 Token，自动注册并开始流式上报。",
-    code: "--hub wss://hub.acme.dev --token ***",
+    body: "指定 Hub 地址，自动注册并开始流式上报。",
+    code: "./clawwatch-agent --hub wss://clawwatch.intra.mlamp.cn",
   },
   {
     icon: ChartLineUpIcon,
     n: "03",
     title: "查看面板",
-    body: "打开浏览器，实时查看所有 Agent 的轨迹、Token 和工具调用。",
-    code: "open https://hub.acme.dev",
+    body: "打开浏览器，输入主机 Token，实时查看轨迹和工具调用。",
+    code: "open https://clawwatch.intra.mlamp.cn",
   },
 ];
 

@@ -103,7 +103,7 @@ export default function Hero() {
               />
             </a>
             <a
-              href="https://github.com/clawwatch/clawwatch"
+              href="https://github.com/lyj7890/ClawWatch"
               target="_blank"
               rel="noreferrer"
               className="inline-flex items-center gap-2 rounded-lg border border-ink-800 px-5 py-3 text-sm font-medium text-ink-200 transition-colors hover:border-ink-700 hover:text-white"

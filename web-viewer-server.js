@@ -196,8 +196,10 @@ function watchSessionFile(filePath, clientId) {
       const stats = fs.statSync(filePath);
 
       if (stats.size > lastSize) {
-        const content = fs.readFileSync(filePath, 'utf-8');
-        const newContent = content.slice(lastSize);
+        // lastSize is a byte offset. Slice the Buffer before decoding UTF-8;
+        // slicing a JS string with a byte offset skips multibyte content.
+        const content = fs.readFileSync(filePath);
+        const newContent = content.subarray(lastSize).toString('utf-8');
         lastSize = stats.size;
 
         const newLines = newContent.split('\n').filter(l => l.trim());

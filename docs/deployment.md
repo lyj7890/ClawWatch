@@ -63,7 +63,7 @@ docker run -d \
 
 - Harbor 镜像仓库：`hub.intra.mlamp.cn/k8s/clawwatch-hub`
 - Namespace：`openclaw`
-- Ingress：`clawhub.intra.mlamp.cn`
+- Ingress：`clawatch.intra.mlamp.cn`
 
 ### 部署步骤
 
@@ -155,7 +155,7 @@ kubectl --context tbj6 -n openclaw logs -f deploy/clawwatch-hub
 kubectl --context tbj6 -n openclaw exec deploy/clawwatch-hub -- cat /app/data/tokens.json
 
 # 健康检查
-curl https://clawhub.intra.mlamp.cn/api/health
+curl https://clawatch.intra.mlamp.cn/api/health
 ```
 
 ## 版本发布流程

@@ -101,11 +101,23 @@ Sessions 不更新？检查会话路径：
 
 ## 🗺️ Roadmap
 
-- [ ] **远端模式（Hub-and-Spoke）**
-  - `clawwatch agent` — 本地监控，主动推送到 Hub
-  - `clawwatch hub` — 公网中继服务器，支持多 Agent 接入
-  - `clawwatch console` — 浏览器连接 Hub 远程查看
+- [x] **远端模式（Hub-and-Spoke）**
+  - `agent/clawwatch-agent` — Go Agent，主动推送主机、OpenClaw Agent、Session 与实时日志
+  - `hub/clawwatch-hub` — 公网中继服务器，支持多 Agent 接入
+  - Hub 内置 Console UI — 浏览器连接 Hub 远程查看
   - 适合手机随时查看 Agent 状态，或多人共享 Agent 运行情况
+
+## 🦞 ClawPet macOS 电子宠物
+
+仓库包含一个 SwiftPM macOS 原型，会连接本地 ClawWatch 服务，并以置顶桌面宠物展示
+OpenClaw 的实时活动摘要、工具调用和回复预览。
+
+```bash
+./script/build_and_run.sh
+```
+
+ClawPet 默认连接 `http://localhost:3939`，因此需要先启动 ClawWatch。Thinking 事件会转换
+为进度摘要，不展示原始隐藏推理。
 
 ## 📄 许可证
 

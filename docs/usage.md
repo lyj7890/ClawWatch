@@ -6,7 +6,7 @@ ClawWatch 是 OpenClaw 实时会话监控器，通过 Web 界面实时查看 AI 
 
 ## 访问地址
 
-- **Hub Console**: https://clawhub.intra.mlamp.cn
+- **Hub Console**: https://clawatch.intra.mlamp.cn
 
 ## 界面说明
 

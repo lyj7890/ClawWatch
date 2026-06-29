@@ -38,7 +38,7 @@ export default function Footer() {
             </p>
             <div className="mt-5 flex items-center gap-3">
               <a
-                href="https://github.com/clawwatch/clawwatch"
+                href="https://github.com/lyj7890/ClawWatch"
                 target="_blank"
                 rel="noreferrer"
                 className="flex items-center gap-2 rounded-lg border border-ink-800 px-3 py-2 text-sm text-ink-300 transition-colors hover:border-ink-700 hover:text-white"

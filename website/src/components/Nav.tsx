@@ -33,7 +33,7 @@ export default function Nav() {
 
         <div className="flex items-center gap-3">
           <a
-            href="https://github.com/clawwatch/clawwatch"
+            href="https://github.com/lyj7890/ClawWatch"
             target="_blank"
             rel="noreferrer"
             className="flex h-9 w-9 items-center justify-center rounded-lg border border-ink-800 text-ink-400 transition-colors hover:border-ink-700 hover:text-ink-100"

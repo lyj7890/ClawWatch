@@ -9,7 +9,7 @@ const CODE: Line[] = [
   { tokens: [] },
   { tokens: [{ t: "// 将此 Agent 注册到你的 Hub", c: "text-ink-600" }] },
   { tokens: [{ t: "const", c: "text-fuchsia-300/90" }, { t: " w = " }, { t: "watch", c: "text-sky-300" }, { t: ".connect({" }] },
-  { tokens: [{ t: "  hub:   ", }, { t: "'wss://hub.acme.dev'", c: "text-brand-400" }, { t: "," }] },
+  { tokens: [{ t: "  hub:   ", }, { t: "'wss://clawwatch.intra.mlamp.cn'", c: "text-brand-400" }, { t: "," }] },
   { tokens: [{ t: "  token: " }, { t: "process", c: "text-sky-300" }, { t: ".env.CLAWWATCH_TOKEN," }] },
   { tokens: [{ t: "  agent: " }, { t: "'agent-07'", c: "text-brand-400" }, { t: "," }] },
   { tokens: [{ t: "})" }] },
@@ -22,7 +22,7 @@ const PLAIN = `import { watch } from '@clawwatch/sdk'
 
 // 将此 Agent 注册到你的 Hub
 const w = watch.connect({
-  hub:   'wss://hub.acme.dev',
+  hub:   'wss://clawwatch.intra.mlamp.cn',
   token: process.env.CLAWWATCH_TOKEN,
   agent: 'agent-07',
 })

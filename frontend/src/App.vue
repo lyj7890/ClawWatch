@@ -182,7 +182,7 @@
       </aside>
 
       <!-- Message List -->
-      <main ref="messageListEl" class="flex-1 overflow-y-auto relative">
+      <main ref="messageListEl" class="flex-1 overflow-y-auto relative" @scroll="onMessageScroll">
         <div v-if="loading" class="flex items-center justify-center h-full">
           <div class="text-gray-600">Loading...</div>
         </div>
@@ -201,6 +201,16 @@
             :force-expand-args="forceExpandArgs"
           />
         </div>
+
+        <!-- 新消息提示按钮 -->
+        <button
+          v-if="newMessageCount > 0"
+          @click="scrollToBottom(true)"
+          class="absolute bottom-4 left-1/2 -translate-x-1/2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-full text-sm font-medium shadow-lg transition animate-bounce z-20 flex items-center gap-2"
+        >
+          <span>↓</span>
+          <span>{{ newMessageCount }} 条新消息</span>
+        </button>
       </main>
     </div>
   </div>
@@ -232,6 +242,8 @@ const sortOrder = ref('desc')
 const autoRefresh = ref(true)
 const messageListEl = ref(null)
 const collapsedAgents = reactive({})        // { agentName: true/false }
+const isAtBottom = ref(true)
+const newMessageCount = ref(0)
 
 const filters = ref({
   user: true,
@@ -482,7 +494,30 @@ async function loadSession(sessionId = null) {
 
 async function switchSession(sessionId, agent) {
   currentAgent.value = agent
+  newMessageCount.value = 0
   await loadSession(sessionId)
+  // 切换 session 后滚到底部
+  setTimeout(() => scrollToBottom(true), 50)
+}
+
+// ── 智能滚动 ──
+function onMessageScroll() {
+  const el = messageListEl.value
+  if (!el) return
+  const threshold = 50
+  isAtBottom.value = el.scrollHeight - el.scrollTop - el.clientHeight < threshold
+  // 用户手动滚回底部时清除新消息计数
+  if (isAtBottom.value) newMessageCount.value = 0
+}
+
+function scrollToBottom(force = false) {
+  const el = messageListEl.value
+  if (!el) return
+  if (force || isAtBottom.value) {
+    el.scrollTop = el.scrollHeight
+    newMessageCount.value = 0
+    isAtBottom.value = true
+  }
 }
 
 function formatTime(mtime) {
@@ -524,7 +559,13 @@ function startPolling() {
 
             if (session.id === currentSessionId.value) {
               if (autoRefresh.value && data.length > messages.value.length) {
+                const addedCount = data.length - messages.value.length
                 messages.value = data
+                if (isAtBottom.value) {
+                  setTimeout(() => scrollToBottom(true), 50)
+                } else {
+                  newMessageCount.value += addedCount
+                }
               }
               sessionMessageCounts[session.id] = { count: currentCount, hasUnread: false, newCount: 0 }
             } else {

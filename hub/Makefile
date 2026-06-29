@@ -1,10 +1,14 @@
 BINARY=clawwatch-hub
+AGENT_BINARY=clawwatch-agent
 GO=go
 
-.PHONY: build build-linux run clean
+.PHONY: build build-agent build-linux run clean
 
 build:
 	$(GO) build -o $(BINARY) .
+
+build-agent:
+	cd ../agent && $(GO) build -o ../hub/$(AGENT_BINARY) .
 
 build-linux:
 	GOOS=linux GOARCH=amd64 $(GO) build -o $(BINARY)-linux-amd64 .
@@ -19,4 +23,4 @@ run-secure: build
 		--console-token $${HUB_CONSOLE_TOKEN:-change-me}
 
 clean:
-	rm -f $(BINARY) $(BINARY)-linux-*
+	rm -f $(BINARY) $(BINARY)-linux-* $(AGENT_BINARY)

@@ -11,7 +11,7 @@
 ## 前置条件
 
 - 主机上已安装 OpenClaw（session 目录默认 `~/.openclaw/agents`）
-- 网络可达 Hub 地址（`wss://clawhub.intra.mlamp.cn`）
+- 网络可达 Hub 地址（`wss://clawatch.intra.mlamp.cn`）
 - Hub 的 AgentToken（如果 Hub 配置了 `HUB_AGENT_TOKEN`）
 
 ## 安装 Agent
@@ -36,13 +36,13 @@ cp clawwatch-agent ~/.local/bin/
 
 ```bash
 # 基本用法
-clawwatch-agent --hub wss://clawhub.intra.mlamp.cn
+clawwatch-agent --hub wss://clawatch.intra.mlamp.cn
 
 # 如果 Hub 配置了 AgentToken
-clawwatch-agent --hub wss://clawhub.intra.mlamp.cn --token <agent-token>
+clawwatch-agent --hub wss://clawatch.intra.mlamp.cn --token <agent-token>
 
 # 指定自定义 OpenClaw agents 目录
-clawwatch-agent --hub wss://clawhub.intra.mlamp.cn --dir /path/to/agents
+clawwatch-agent --hub wss://clawatch.intra.mlamp.cn --dir /path/to/agents
 ```
 
 ### 参数说明
@@ -64,7 +64,7 @@ clawwatch-agent --hub wss://clawhub.intra.mlamp.cn --dir /path/to/agents
 
 仅在接受隐私风险时关闭：
 ```bash
-clawwatch-agent --hub wss://clawhub.intra.mlamp.cn --trajectory-redact=false
+clawwatch-agent --hub wss://clawatch.intra.mlamp.cn --trajectory-redact=false
 ```
 
 ## 主机 ID
@@ -100,7 +100,7 @@ cat > ~/Library/LaunchAgents/com.clawwatch.agent.plist << 'PLIST'
     <array>
         <string>/Users/YOU/.local/bin/clawwatch-agent</string>
         <string>--hub</string>
-        <string>wss://clawhub.intra.mlamp.cn</string>
+        <string>wss://clawatch.intra.mlamp.cn</string>
     </array>
     <key>RunAtLoad</key>
     <true/>
@@ -132,7 +132,7 @@ After=network.target
 [Service]
 Type=simple
 User=YOUR_USER
-ExecStart=/usr/local/bin/clawwatch-agent --hub wss://clawhub.intra.mlamp.cn
+ExecStart=/usr/local/bin/clawwatch-agent --hub wss://clawatch.intra.mlamp.cn
 Restart=always
 RestartSec=5
 
