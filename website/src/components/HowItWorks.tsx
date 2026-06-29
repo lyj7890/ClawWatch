@@ -15,15 +15,15 @@ const steps: Step[] = [
     icon: DownloadSimpleIcon,
     n: "01",
     title: "安装 Agent",
-    body: "下载预编译二进制，或从源码编译。支持 Linux / macOS / arm64。",
-    code: "curl -fsSL https://github.com/lyj7890/ClawWatch/releases/latest/download/clawwatch-agent-$(uname -s)-$(uname -m) -o clawwatch-agent && chmod +x clawwatch-agent",
+    body: "一行命令自动检测系统架构，下载并安装。",
+    code: "curl -fsSL https://raw.githubusercontent.com/lyj7890/ClawWatch/main/install.sh | sh",
   },
   {
     icon: PlugsConnectedIcon,
     n: "02",
     title: "连接 Hub",
     body: "指定 Hub 地址，自动注册并开始流式上报。",
-    code: "./clawwatch-agent --hub wss://clawwatch.intra.mlamp.cn",
+    code: "clawwatch-agent --hub wss://clawwatch.intra.mlamp.cn",
   },
   {
     icon: ChartLineUpIcon,
@@ -62,9 +62,8 @@ export default function HowItWorks() {
               <p className="mt-2 text-[15px] leading-relaxed text-ink-400">
                 {s.body}
               </p>
-              <div className="mt-5 rounded-md border border-ink-800 bg-ink-950 px-3 py-2 font-mono text-xs text-brand-400/90">
-                <span className="text-ink-600">$ </span>
-                {s.code}
+              <div className="mt-5 overflow-x-auto rounded-md border border-ink-800 bg-ink-950 px-3 py-2 font-mono text-xs text-brand-400/90">
+                <span className="whitespace-nowrap"><span className="text-ink-600">$ </span>{s.code}</span>
               </div>
             </div>
           </Reveal>
