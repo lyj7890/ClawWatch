@@ -6,6 +6,7 @@ const links = [
   { label: "架构", href: "#architecture" },
   { label: "接入", href: "#how-it-works" },
   { label: "文档", href: "#docs" },
+  { label: "Console", href: "/console" },
 ];
 
 export default function Nav() {

@@ -63,7 +63,7 @@ export default function Hero() {
             className="mb-6 inline-flex items-center gap-2 rounded-full border border-ink-800 bg-ink-900/60 px-3 py-1 text-xs text-ink-400"
           >
             <PulseIcon size={14} weight="bold" className="text-brand-400" />
-            Live agent observability
+            实时 Agent 可观测性
           </motion.div>
 
           <motion.h1

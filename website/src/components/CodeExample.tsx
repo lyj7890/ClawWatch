@@ -5,30 +5,26 @@ import Reveal from "./Reveal";
 type Line = { tokens: { t: string; c?: string }[] };
 
 const CODE: Line[] = [
-  { tokens: [{ t: "import", c: "text-fuchsia-300/90" }, { t: " { watch } " }, { t: "from", c: "text-fuchsia-300/90" }, { t: " " }, { t: "'@clawwatch/sdk'", c: "text-brand-400" }] },
+  { tokens: [{ t: "# 安装 ClawWatch Agent", c: "text-ink-600" }] },
+  { tokens: [{ t: "curl -fsSL", c: "text-fuchsia-300/90" }, { t: " https://raw.githubusercontent.com/" }] },
+  { tokens: [{ t: "  lyj7890/ClawWatch/main/install.sh", c: "text-brand-400" }, { t: " | ", c: "text-ink-400" }, { t: "sh", c: "text-fuchsia-300/90" }] },
   { tokens: [] },
-  { tokens: [{ t: "// 将此 Agent 注册到你的 Hub", c: "text-ink-600" }] },
-  { tokens: [{ t: "const", c: "text-fuchsia-300/90" }, { t: " w = " }, { t: "watch", c: "text-sky-300" }, { t: ".connect({" }] },
-  { tokens: [{ t: "  hub:   ", }, { t: "'wss://clawwatch.intra.mlamp.cn'", c: "text-brand-400" }, { t: "," }] },
-  { tokens: [{ t: "  token: " }, { t: "process", c: "text-sky-300" }, { t: ".env.CLAWWATCH_TOKEN," }] },
-  { tokens: [{ t: "  agent: " }, { t: "'agent-07'", c: "text-brand-400" }, { t: "," }] },
-  { tokens: [{ t: "})" }] },
+  { tokens: [{ t: "# 启动并连接到 Hub", c: "text-ink-600" }] },
+  { tokens: [{ t: "clawwatch-agent", c: "text-sky-300" }, { t: " \\" }] },
+  { tokens: [{ t: "  --hub ", c: "text-ink-400" }, { t: "wss://clawatch.intra.mlamp.cn", c: "text-brand-400" }] },
   { tokens: [] },
-  { tokens: [{ t: "// 每一步操作现在都会实时推送到控制台", c: "text-ink-600" }] },
-  { tokens: [{ t: "await", c: "text-fuchsia-300/90" }, { t: " w." }, { t: "run", c: "text-sky-300" }, { t: "(myAgentLoop)" }] },
+  { tokens: [{ t: "# ✅ Agent 已连接，打开浏览器查看", c: "text-ink-600" }] },
+  { tokens: [{ t: "open", c: "text-fuchsia-300/90" }, { t: " https://clawatch.intra.mlamp.cn/console", c: "text-brand-400" }] },
 ];
 
-const PLAIN = `import { watch } from '@clawwatch/sdk'
+const PLAIN = `# 安装 ClawWatch Agent
+curl -fsSL https://raw.githubusercontent.com/lyj7890/ClawWatch/main/install.sh | sh
 
-// 将此 Agent 注册到你的 Hub
-const w = watch.connect({
-  hub:   'wss://clawwatch.intra.mlamp.cn',
-  token: process.env.CLAWWATCH_TOKEN,
-  agent: 'agent-07',
-})
+# 启动并连接到 Hub
+clawwatch-agent --hub wss://clawatch.intra.mlamp.cn
 
-// 每一步操作现在都会实时推送到控制台
-await w.run(myAgentLoop)`;
+# ✅ Agent 已连接，打开浏览器查看
+open https://clawatch.intra.mlamp.cn/console`;
 
 export default function CodeExample() {
   const [copied, setCopied] = useState(false);
@@ -63,7 +59,7 @@ export default function CodeExample() {
           <div className="overflow-hidden rounded-xl border border-ink-800 bg-ink-950 shadow-xl shadow-black/30">
             <div className="flex items-center gap-2 border-b border-ink-800 bg-ink-900/50 px-4 py-3">
               <TerminalWindowIcon size={15} className="text-ink-500" />
-              <span className="font-mono text-xs text-ink-500">agent.ts</span>
+              <span className="font-mono text-xs text-ink-500">terminal</span>
               <button
                 onClick={copy}
                 className="ml-auto flex items-center gap-1.5 rounded-md border border-ink-800 px-2.5 py-1 font-mono text-xs text-ink-400 transition-colors hover:border-ink-700 hover:text-ink-100"
