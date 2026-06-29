@@ -1,0 +1,69 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: clawwatch-website
+  namespace: openclaw
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: clawwatch-website
+  template:
+    metadata:
+      labels:
+        app: clawwatch-website
+    spec:
+      containers:
+        - name: nginx
+          image: hub.intra.mlamp.cn/k8s/clawwatch-website:v1.0.0
+          ports:
+            - containerPort: 80
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+            periodSeconds: 30
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: clawwatch-website
+  namespace: openclaw
+spec:
+  selector:
+    app: clawwatch-website
+  ports:
+    - port: 80
+      targetPort: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: clawwatch-website
+  namespace: openclaw
+  annotations:
+    kubernetes.io/ingress.class: nginx
+spec:
+  rules:
+    - host: clawwatch.intra.mlamp.cn
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: clawwatch-website
+                port:
+                  number: 80

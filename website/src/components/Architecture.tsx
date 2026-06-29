@@ -66,7 +66,7 @@ export default function Architecture() {
             </div>
 
             <div className="border-t border-ink-800 bg-ink-900/30 px-6 py-4 font-mono text-xs text-ink-500 sm:px-10">
-              <span className="text-brand-400">→</span> 事件为只追加模式，按 Agent 签名，支持从任意时间点回放 Session。
+              <span className="text-brand-400">→</span> 事件为只追加模式，按主机隔离存储，支持 Session 历史回溯。
             </div>
           </div>
         </Reveal>
