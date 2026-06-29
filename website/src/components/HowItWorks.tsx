@@ -14,23 +14,23 @@ const steps: Step[] = [
   {
     icon: DownloadSimpleIcon,
     n: "01",
-    title: "安装 Agent",
-    body: "一行命令自动检测系统架构，下载并安装。",
-    code: "curl -fsSL https://raw.githubusercontent.com/lyj7890/ClawWatch/main/install.sh | sh",
+    title: "复制指令",
+    body: "复制下方安装命令，发给你的 AI Agent 执行。",
+    code: "帮我安装 ClawWatch Agent：curl -fsSL https://raw.githubusercontent.com/lyj7890/ClawWatch/main/install.sh | sh",
   },
   {
     icon: PlugsConnectedIcon,
     n: "02",
     title: "连接 Hub",
-    body: "指定 Hub 地址，自动注册并开始流式上报。",
-    code: "clawwatch-agent --hub wss://clawwatch.intra.mlamp.cn",
+    body: "Agent 安装后，让龙虾启动并连接到 Hub。",
+    code: "启动 clawwatch-agent 连接到 wss://clawatch.intra.mlamp.cn",
   },
   {
     icon: ChartLineUpIcon,
     n: "03",
     title: "查看面板",
-    body: "打开浏览器，输入主机 Token，实时查看轨迹和工具调用。",
-    code: "open https://clawwatch.intra.mlamp.cn",
+    body: "打开 Console，输入主机 Token 即可实时查看。",
+    code: "https://clawatch.intra.mlamp.cn/console",
   },
 ];
 
@@ -39,10 +39,10 @@ export default function HowItWorks() {
     <section id="how-it-works" className="mx-auto max-w-6xl scroll-mt-20 px-5 py-20 sm:px-8 sm:py-28">
       <Reveal>
         <p className="font-mono text-xs uppercase tracking-[0.2em] text-brand-400">
-          快速开始
+          快速接入
         </p>
         <h2 className="mt-3 max-w-xl text-3xl font-semibold tracking-tight text-white sm:text-4xl">
-          三步即可上线
+          复制指令，发给你的龙虾
         </h2>
       </Reveal>
 
@@ -63,7 +63,7 @@ export default function HowItWorks() {
                 {s.body}
               </p>
               <div className="mt-5 overflow-x-auto rounded-md border border-ink-800 bg-ink-950 px-3 py-2 font-mono text-xs text-brand-400/90">
-                <span className="whitespace-nowrap"><span className="text-ink-600">$ </span>{s.code}</span>
+                <span className="whitespace-nowrap">{s.code}</span>
               </div>
             </div>
           </Reveal>
