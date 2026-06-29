@@ -1,23 +1,28 @@
-# Claw Watch - OpenClaw 实时会话监控器
-FROM hub.intra.mlamp.cn/public/node:20-alpine
+# 多阶段构建 - clawwatch-hub
+# Stage 1: 编译
+FROM --platform=linux/amd64 golang:1.22-alpine AS builder
 
-# 设置工作目录
+WORKDIR /build
+
+# 安装依赖
+COPY go.mod go.sum ./
+RUN go mod download
+
+# 编译
+COPY . .
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o clawwatch-hub .
+
+# Stage 2: 运行时（最小镜像）
+FROM --platform=linux/amd64 alpine:3.19
+
+RUN apk add --no-cache ca-certificates tzdata
+
 WORKDIR /app
+COPY --from=builder /build/clawwatch-hub .
 
-# 复制 package.json 并安装依赖
-COPY package.json .
-RUN npm install --production
+EXPOSE 4848
 
-# 复制应用文件
-COPY web-viewer-server.js .
-COPY web-viewer.html .
-
-# 暴露端口
-EXPOSE 3939
-
-# 健康检查
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:3939/api/agents', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
+  CMD wget -qO- http://localhost:4848/api/health || exit 1
 
-# 启动服务
-CMD ["node", "web-viewer-server.js"]
+CMD ["./clawwatch-hub", "--port", "4848"]

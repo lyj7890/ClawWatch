@@ -1,6 +1,14 @@
 node_modules
-npm-debug.log
 .git
 .gitignore
-README.md
-start.sh
+local/
+desktop-pet/
+website/
+agent/
+docs/
+k8s/
+.github/
+*.md
+*.log
+*.pid
+data/

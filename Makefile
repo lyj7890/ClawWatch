@@ -8,7 +8,7 @@ build:
 	$(GO) build -o $(BINARY) .
 
 build-agent:
-	cd ../agent && $(GO) build -o ../hub/$(AGENT_BINARY) .
+	cd agent && $(GO) build -o $(AGENT_BINARY) .
 
 build-linux:
 	GOOS=linux GOARCH=amd64 $(GO) build -o $(BINARY)-linux-amd64 .
